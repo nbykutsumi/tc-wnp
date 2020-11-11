@@ -1,0 +1,263 @@
+# %%
+import matplotlib
+matplotlib.use('Agg')
+#%matplotlib inline
+#----------------------------------
+import sys, os, pickle
+from   mpl_toolkits.basemap import Basemap
+from   numpy import *
+from   datetime import datetime, timedelta
+from   importlib import import_module
+import numpy as np
+import matplotlib.pyplot as plt
+import util
+from bisect import bisect_left
+from detect_fsub import *
+#--------------------------------------
+
+lens    = range(1,9+1)
+#lens    = range(2,9+1)
+#lens    = [1]
+
+iYM = [2000,1]
+eYM = [2010,12]
+
+lYM = util.ret_lYM(iYM,eYM)
+
+#cmbnd = None
+dgridy = 9  # 9 x 0.5615674 ~ 5.05 degree radius
+dgridx = 9  # 9 x 0.5625    ~ 5.06 degree radius
+#-----------------
+prj     = "d4PDF"
+model   = "__"
+expr    = 'XX'
+#scen    = 'HPB' # run={expr}-{scen}-{ens}
+#scen    = 'HPB' # run={expr}-{scen}-{ens}
+#lscen   = ['HPB','HPB_NAT']
+lscen   = ['HPB_NAT','HPB']
+#lscen   = ['HPB_NAT']
+#lens    = range(1,9+1)
+#lens    = [1]
+noleap  = False
+
+detectName = 'wsd_d4pdf_20200813'
+#detectName = 'detect_20200401'
+#config      = import_module("%s.config"%(detectName))
+ConstCyclone= import_module("%s.ConstCyclone"%(detectName))
+Cyclone     = import_module("%s.Cyclone"%(detectName))
+d4PDF       = import_module("%s.d4PDF"%(detectName))
+IBTrACS     = import_module("%s.IBTrACS"%(detectName))
+
+
+wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
+figdir  = '/home/utsumi/temp/bams2020'
+compbasedir= '/home/utsumi/temp/bams2020/composite'
+d4pdfdir = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'
+d4sfc = d4PDF.snp_6hr_2byte(vtype='sfc', dbbaseDir=d4pdfdir)
+d4atm = d4PDF.snp_6hr_2byte(vtype='atm', dbbaseDir=d4pdfdir)
+
+#----------------------------------
+a1latin = d4PDF.Lat()   # dlat ~ 0.5615674
+a1lonin = d4PDF.Lon()   # dlon = 0.5625
+
+nyin    = len(a1latin)
+nxin    = len(a1lonin)
+
+miss =-9999
+miss_int= -9999
+
+#[[lllat,lllon],[urlat,urlon]] = [[0,100],[45,180]]
+#[[lllat,lllon],[urlat,urlon]] = [[0,100],[60,180]]
+#[[lllat,lllon],[urlat,urlon]] = [[20,120],[47,150]]
+[[lllat,lllon],[urlat,urlon]] = [[0,100],[50,150]]
+
+#************************************
+# d4PDF (Objective detection)
+#************************************
+#lthsst  = [27]
+lthsst  = [-9999]
+lexrvort = np.array([3])*1.0e-5
+ltcrvort = np.array([3])*1.0e-5
+lthwcore= [-9999]
+lthdura = [36]
+lthwind = [-9999]
+lthwdif = [-9999]
+
+lkey = [[thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif]
+        for thsst   in lthsst
+        for exrvort in lexrvort
+        for tcrvort in ltcrvort
+        for thwcore in lthwcore
+        for thdura in lthdura
+        for thwind in lthwind
+        for thwdif in lthwdif
+        ]
+
+for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
+    const  = ConstCyclone.Const(prj=prj, model=model)
+    const['Lat'] = d4PDF.Lat()
+    const['Lon'] = d4PDF.Lon()
+
+    const['thsst']   = thsst + 273.15   # K
+    const['exrvort'] = exrvort
+    const['tcrvort'] = tcrvort 
+    const['thwcore'] = thwcore
+    const['thdura']  = thdura
+    const['thwind']  = thwind
+    const['thwdif']  = thwdif
+
+    exrvortout = exrvort*1.0e+5
+    tcrvortout = tcrvort*1.0e+5
+
+    for scen in lscen:
+        slabel = 'sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-wind-%02d-wdif-%d-du-%02d'%(thsst, exrvortout, tcrvortout, thwcore, thwind, thwdif, thdura)
+
+        for ens in lens:
+            #if (scen=='HPB')&(ens<4): continue # test
+
+            print 'ens=',ens
+            wsDir= wsbaseDir + '/%s-%s-%03d'%(expr, scen, ens)
+        
+            cy  = Cyclone.Cyclone(baseDir=wsDir, const=const)
+
+            for YM in lYM:
+                Year,Mon = YM
+                lDTime = util.ret_lDTime_fromYM([Year,Mon],[Year,Mon], timedelta(hours=6), hour0=0)
+
+                #--- load TC dictionary ---
+                dexcxy, dtcxy  = cy.mkInstDictC_objTC(YM,YM,varname='vortlw')
+
+                #--- load TC dtsum (worm core) --
+                _, dtcxy_wc  = cy.mkInstDictC_objTC(YM,YM,varname='dtsum')
+
+                #--- load TC wind max at upper and lower levels
+                _, dtcxy_wup = cy.mkInstDictC_objTC(YM,YM,varname='wmaxup')
+                _, dtcxy_wlw = cy.mkInstDictC_objTC(YM,YM,varname='wmaxlw')
+
+                #--- load TC ipos, idate, dura ------
+                _, dtcxy_ipos = cy.mkInstDictC_objTC(YM,YM,varname='ipos')
+                _, dtcxy_idate= cy.mkInstDictC_objTC(YM,YM,varname='idate')
+                _, dtcxy_dura = cy.mkInstDictC_objTC(YM,YM,varname='dura')
+                #--------------------------    
+
+                a3prec = []
+                a3wind = []
+                a3slp  = []
+                a1vort = []
+                a1tsum = []
+                a1wup  = []
+                a1wlw  = []
+                a1lat  = []
+                a1lon  = []
+                a1time = [] 
+                a1ipos = []
+                a1idate= []
+                a1dura = []
+
+                for DTime in lDTime:
+                    #--------------------------
+                    ltcxy      = dtcxy[DTime]
+                    ltcxy_wc   = dtcxy_wc[DTime] 
+                    ltcxy_wup  = dtcxy_wup[DTime] 
+                    ltcxy_wlw  = dtcxy_wlw[DTime] 
+                    ltcxy_ipos = dtcxy_ipos[DTime] 
+                    ltcxy_idate= dtcxy_idate[DTime] 
+                    ltcxy_dura = dtcxy_dura [DTime] 
+
+                    if len(ltcxy)==0: continue
+    
+                    ltcx, ltcy, ltcvar = map(np.array,zip(*ltcxy))
+                    _,_, ltsum = map(np.array, zip(*ltcxy_wc))
+                    _,_, lwup  = map(np.array, zip(*ltcxy_wup))
+                    _,_, lwlw  = map(np.array, zip(*ltcxy_wlw))
+                    _,_, lipos = map(np.array, zip(*ltcxy_ipos))
+                    _,_, lidate= map(np.array, zip(*ltcxy_idate))
+                    _,_, ldura = map(np.array, zip(*ltcxy_dura ))
+
+
+                    llattmp = a1latin[ltcy] 
+                    llontmp = a1lonin[ltcx]
+    
+                    a1flaglat= ma.masked_inside(llattmp,lllat,urlat).mask
+                    a1flaglon= ma.masked_inside(llontmp,lllon,urlon).mask
+                    a1flag   = a1flaglat * a1flaglon
+    
+    
+                    if a1flag.sum()==0: continue
+    
+                    llattmp = llattmp[a1flag]
+                    llontmp = llontmp[a1flag]
+                    lytmp   = ltcy[a1flag]
+                    lxtmp   = ltcx[a1flag]
+                    lvorttmp= ltcvar[a1flag]
+                    ltsumtmp= ltsum[a1flag]
+                    lwuptmp = lwup[a1flag]
+                    lwlwtmp = lwlw[a1flag]
+                    lipostmp= lipos[a1flag]
+                    lidatetmp= lidate[a1flag]
+                    lduratmp = ldura[a1flag]
+   
+                    a1lat  = a1lat + llattmp.tolist() 
+                    a1lon  = a1lon + llontmp.tolist()
+                    a1vort = a1vort+ lvorttmp.tolist()
+                    a1tsum = a1tsum+ ltsumtmp.tolist()
+                    a1wup  = a1wup + lwuptmp.tolist()
+                    a1wlw  = a1wlw + lwlwtmp.tolist()
+                    a1ipos = a1ipos+ lipostmp.tolist()
+                    a1idate= a1idate+ lidatetmp.tolist()
+                    a1dura = a1dura + lduratmp.tolist()
+
+                    #-- load d4PDF variables -----
+                    a2prec = d4sfc.load_6hr(vname='PRECIPI', scen=scen, ens=ens, DTime=DTime) *60*60
+                    a2u    = d4sfc.load_6hr(vname='UAOPN', scen=scen, ens=ens, DTime=DTime)
+                    a2v    = d4sfc.load_6hr(vname='VAOPN', scen=scen, ens=ens, DTime=DTime)
+                    a2slp  = d4sfc.load_6hr(vname='PS',    scen=scen, ens=ens, DTime=DTime)
+                    a2wind = np.sqrt(a2u**2 + a2v**2)
+
+                    for i in range(len(lxtmp)):
+                        y = lytmp[i]
+                        x = lxtmp[i]
+    
+                        iy = y-dgridy
+                        ey = y+dgridy
+                        ix = x-dgridx
+                        ex = x+dgridx
+    
+                        a2prectmp = a2prec[iy:ey+1,ix:ex+1]
+                        a2windtmp = a2wind[iy:ey+1,ix:ex+1]
+                        a2slptmp  = a2slp [iy:ey+1,ix:ex+1]
+
+                        a3prec.append(a2prectmp)
+                        a3wind.append(a2windtmp)
+                        a3slp .append(a2slptmp)
+
+                        a1time.append(DTime) 
+
+                dout = {}
+                dout['prec']= np.array(a3prec)
+                dout['wind']= np.array(a3wind)
+                dout['slp' ]= np.array(a3slp)
+                dout['vort']= np.array(a1vort)
+                dout['tsum']= np.array(a1tsum)
+                dout['wup' ]= np.array(a1wup)
+                dout['wlw' ]= np.array(a1wlw)
+                dout['lat' ]= np.array(a1lat)
+                dout['lon' ]= np.array(a1lon)
+                dout['time']= np.array(a1time)
+                dout['ipos']= np.array(a1ipos)
+                dout['idate']= np.array(a1idate)
+                dout['dura']= np.array(a1dura)
+
+                #--- Save file ---------
+                compdir = compbasedir + '/%s/%s.%03d'%(slabel,scen,ens)
+                util.mk_dir(compdir)
+    
+                comppath =  compdir + '/%04d.%02d.pickle'%(Year,Mon)
+                with open(comppath,'wb') as f:
+                     
+                    pickle.dump(dout, f)
+                    print comppath
+             
+
+
+# %%

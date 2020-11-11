@@ -1,0 +1,233 @@
+# %%
+import matplotlib
+matplotlib.use('Agg')
+%matplotlib inline
+#----------------------------------
+import sys, os, pickle
+from   mpl_toolkits.basemap import Basemap
+from   numpy import *
+from   datetime import datetime, timedelta
+from   importlib import import_module
+import numpy as np
+import matplotlib.pyplot as plt
+import util
+from bisect import bisect_left
+from detect_fsub import *
+#--------------------------------------
+lens    = range(1,9+1)
+
+#iYM = [2000,8]
+#eYM = [2000,8]
+iYM = [2000,1]
+eYM = [2010,12]
+lYM = util.ret_lYM(iYM,eYM)
+
+iYMobs=[1980,1]
+eYMobs=[2010,12]
+lYMobs = util.ret_lYM(iYMobs, eYMobs)
+
+lvname = ['prec','wind','slp']
+#lvname = ['prec','slp']
+#lvname = ['prec']
+
+
+#[[lllat,lllon],[urlat,urlon]] = [[20,120],[47,150]]
+#[[lllat,lllon],[urlat,urlon]] = [[20,120],[40,150]]
+[[lllat,lllon],[urlat,urlon]] = [[30,120],[47,150]]
+#-----------------
+prj     = "d4PDF"
+model   = "__"
+expr    = 'XX'
+#scen    = 'HPB' # run={expr}-{scen}-{ens}
+#scen    = 'HPB' # run={expr}-{scen}-{ens}
+lscen   = ['HPB','HPB_NAT']
+#lscen   = ['HPB']
+#lscen   = ['HPB_NAT']
+#lens    = range(1,9+1)
+#lens    = [1]
+res     = "320x640"
+noleap  = False
+
+detectName = 'wsd_d4pdf_20200428'
+compbasedir= '/home/utsumi/temp/bams2020/composite'
+nradorg = 9  # composit: (2*nradorg+1)*(2*nradorg+1)
+
+for vname in lvname:
+    if vname=='prec':
+        #a1bnd = np.arange(0, 80+0.01, 1)
+        a1bnd = np.arange(0, 60.01, 2.5)
+    elif vname=='wind':
+        a1bnd = np.arange(0,50,2)
+    elif vname=='slp':
+        a1bnd = np.arange(930,1010+0.01,2)
+
+    a1cent= 0.5* (a1bnd[:-1] + a1bnd[1:])
+    #**********************************
+    # Obs
+    #----------------------------------
+    a1var_obs = []
+    for YM in lYMobs:
+        Year,Mon = YM
+        compdir  = compbasedir + '/obs-tc' 
+        comppath = compdir + '/%04d.%02d.pickle'%(Year,Mon)
+        with open(comppath,'rb') as f:
+            ddat = pickle.load(f)
+        a3var = ddat[vname]
+        a1lat = ddat['lat']
+        a1lon = ddat['lon']
+
+        if a3var.shape[0]==0: continue
+
+        #-- Screening region ----
+        a1flaglat = ma.masked_inside(a1lat, lllat, urlat).mask
+        a1flaglon = ma.masked_inside(a1lon, lllon, urlon).mask
+
+        a1flag = a1flaglat * a1flaglon
+        #------------------------
+        a1var_tmp = a3var[a1flag,:,:].flatten()
+        #a1var_tmp = a3var[a1flag,:,:].max(axis=(1,2))
+        a1var_obs.extend(a1var_tmp.tolist())
+
+    a1var_obs  = np.array(a1var_obs)
+
+    if vname=='slp':
+        a1var_obs = a1var_obs * 0.01
+
+    a1hist_obs, _ = np.histogram(a1var_obs, bins=a1bnd)
+    a1hist_obs = a1hist_obs / float(a1hist_obs.sum())
+    #----------------------------------
+    miss =-9999
+    miss_int= -9999
+    thsst0 = 27
+    exrvortout0 = 3
+    tcrvortout0 = 3
+    thwcore0 = 0
+    thdura0  = 48
+
+    slabel0 = 'sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-du-%02d'%(thsst0, exrvortout0, tcrvortout0, thwcore0, thdura0)
+
+    ltcrvort = np.array([4.8])*1.0e-5
+    lthwcore = np.array([0.3])
+
+    lkey = [[tcrvort,thwcore]
+            for tcrvort in ltcrvort
+            for thwcore in lthwcore
+            ]
+
+    for (tcrvort,thwcore) in lkey:
+        tcrvortout = tcrvort*1.0e+5
+
+        d2_sim = {}
+        d2hist_sim = {}
+        for scen in lscen:
+            slabel = 'sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-du-%02d'%(thsst0, exrvortout0, tcrvortout, thwcore, thdura0)
+            #slabel = 'wceach-%s-%s-%s-sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-du-%02d'%(ctype, expr, scen, thsst, exrvortout, tcrvortout, thwcore, thdura)
+            d2hist_sim[scen] = []
+            for ens in lens:
+
+                a1var_sim = []
+                for YM in lYM:
+                    Year,Mon = YM
+                    #--- Load file ---------
+                    compdir = compbasedir + '/%s/%s.%03d'%(slabel0,scen,ens)
+                    comppath =  compdir + '/%04d.%02d.pickle'%(Year,Mon)
+                    with open(comppath,'rb') as f:
+                        ddat = pickle.load(f)
+                    a3var = ddat[vname]
+                    a1vort= ddat['vort']
+                    a1tsum= ddat['tsum']
+                    a1lat = ddat['lat']
+                    a1lon = ddat['lon']
+                    if a3var.shape[0] ==0: continue
+
+                    #-- Screen TC -----------
+                    a1flagvort = ma.masked_greater_equal(a1vort, tcrvort).mask
+
+                    a1flagwc   = ma.masked_greater_equal(a1tsum, thwcore).mask
+
+                    #-- Region mask ---------
+                    a1flaglat = ma.masked_inside(a1lat, lllat, urlat).mask
+                    a1flaglon = ma.masked_inside(a1lon, lllon, urlon).mask
+
+                    #------------------------
+                    a1flag = a1flagvort * a1flagwc * a1flaglat* a1flaglon
+
+                    if a1flag is np.bool_(False):
+                        continue
+
+                    if vname=='slp':
+                        a1var_tmp = a3var[a1flag,nradorg,nradorg]*0.01
+                    else:
+                        a1var_tmp = a3var[a1flag,:,:].flatten()
+                        #a1var_tmp = a3var[a1flag,:,:].max(axis=(1,2))
+
+                    a1var_sim.extend(a1var_tmp.tolist())
+
+                a1var_sim = np.array(a1var_sim)
+                a1hist_sim, _ = np.histogram(a1var_sim, bins=a1bnd)
+
+                d2hist_sim[scen].append(a1hist_sim)
+
+            d2hist_sim[scen] = np.array(d2hist_sim[scen])
+
+        #---- Make mean and normalize simulation --
+        d1hist_mean_sim = {}
+        for scen in lscen:
+            a1hist_mean_sim = d2hist_sim[scen].sum(axis=0)
+            #a1hist_mean_sim = a1hist_mean_sim / float(a1hist_mean_sim.sum())
+            d1hist_mean_sim[scen] = a1hist_mean_sim / float(len(lens))
+
+            #-- Normalize each ensemble ---
+            #d2hist_sim[scen] = d2hist_sim[scen]/d2hist_sim[scen].sum(axis=1).reshape(-1,1).astype('float32')
+
+        #---- Range ----
+        d1hist_up = {}
+        d1hist_lw = {}
+        d1err_up  = {}
+        d1err_lw  = {}
+        for scen in lscen:
+            d1hist_up[scen] = np.percentile(d2hist_sim[scen], 75, axis=0)
+            d1hist_lw[scen] = np.percentile(d2hist_sim[scen], 25, axis=0)
+            d1err_up[scen]  = d1hist_up[scen] - d1hist_mean_sim[scen]
+            d1err_lw[scen]  = -d1hist_lw[scen] + d1hist_mean_sim[scen]
+        #---- Draw PDF ---------------
+        fig = plt.figure(figsize=(10,4))
+        ax  = fig.add_axes([0.1,0.1, 0.8, 0.8])
+
+        #--- Observation ----------
+        #plt.plot(a1cent, a1hist_obs, '-',color='r', linewidth=1.6)
+
+
+        #--- Simulation -----------
+        for scen in lscen: 
+            cm_ens = {'HPB':'0.5','HPB_NAT':'blue'}[scen]
+            cm_ave = {'HPB':'tomato',  'HPB_NAT':'steelblue'}[scen]
+
+            #plt.plot(a1cent, d1hist_up[scen], '-', color=cm_ens, linewidth=0.8)
+            #plt.plot(a1cent, d1hist_lw[scen], '-', color=cm_ens, linewidth=0.8)
+
+            #plt.plot(a1cent, d1hist_mean_sim[scen], '--', color=cm_ave, linewidth=1.6)
+            wbar= (a1bnd[2] - a1bnd[1])*0.4
+            a1x = a1cent + {'HPB':+0.5*wbar, 'HPB_NAT':-0.5*wbar}[scen]
+            #plt.bar(a1x, d1hist_mean_sim[scen], color=cm_ave)
+            plt.bar(a1x, d1hist_mean_sim[scen], width=wbar, color=cm_ave, yerr=[d1err_lw[scen], d1err_up[scen]], ecolor=cm_ens)
+
+            slabel = 'sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-du-%02d'%(thsst0, exrvortout0, tcrvortout, thwcore, thdura0)
+        stitle = vname + ' ' + slabel
+        stitle = stitle + '\n' + '[[%d,%d],[%d,%d]]'%(lllat,lllon,urlat,urlon)
+        plt.title(stitle)
+        if vname=='prec':
+            plt.yscale('log')
+
+        #plt.xlim([30,50])
+        #plt.ylim([1e-6,1e-1])
+        plt.show()            
+        figdir = '/home/utsumi/temp/bams2020'
+        figpath= figdir + '/pdf.%s.%s.png'%(vname,slabel)
+        plt.savefig(figpath)
+        print figpath
+
+        
+
+
+# %%

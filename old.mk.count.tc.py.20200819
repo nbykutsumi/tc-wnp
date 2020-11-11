@@ -1,0 +1,358 @@
+# %%
+import matplotlib
+matplotlib.use('Agg')
+%matplotlib inline
+#----------------------------------
+import sys, os, pickle
+from   mpl_toolkits.basemap import Basemap
+from   numpy import *
+from   datetime import datetime, timedelta
+from   importlib import import_module
+import calendar
+import numpy as np
+import matplotlib.pyplot as plt
+import util
+from bisect import bisect_left
+from detect_fsub import *
+import IBTrACS
+#--------------------------------------
+calcobs = False
+#calcobs = True
+
+calcsim = False
+#calcsim = True
+
+figmon = True
+#figmon = False
+figyear= True
+#figyear= False
+
+target='track'
+#target='point'
+
+lens    = range(1,9+1)
+
+ly_sim = range(2000,2010+1)
+#ly_obs = range(1980,2010+1)
+ly_obs = range(1980,1989+1)
+lmon= range(1,12+1)
+
+[[lllat,lllon],[urlat,urlon]] = [[20,120],[47,150]]
+#[[lllat,lllon],[urlat,urlon]] = [[20,120],[40,150]]
+#[[lllat,lllon],[urlat,urlon]] = [[30,120],[47,150]]
+#[[lllat,lllon],[urlat,urlon]] = [[0,120],[47,150]]
+
+#-----------------
+prj     = "d4PDF"
+model   = "__"
+expr    = 'XX'
+#scen    = 'HPB' # run={expr}-{scen}-{ens}
+#scen    = 'HPB' # run={expr}-{scen}-{ens}
+lscen   = ['HPB','HPB_NAT']
+#lscen   = ['HPB']
+#lscen   = ['HPB_NAT']
+#lens    = range(1,9+1)
+#lens    = [1]
+res     = "320x640"
+noleap  = False
+
+detectName = 'wsd_d4pdf_20200428'
+compbasedir= '/home/utsumi/temp/bams2020/composite'
+nradorg = 9  # composit: (2*nradorg+1)*(2*nradorg+1)
+
+sdomain = 'lat.%03d-%03d.lon.%04d-%04d'%(lllat,urlat,lllon,urlon)
+countbasedir = '/home/utsumi/temp/bams2020/count-%s/%s'%(target,sdomain)
+#**********************************
+# Obs
+#----------------------------------
+ib = IBTrACS.IBTrACS()
+for Year in ly_obs:
+    if calcobs is False: continue
+    for Mon in lmon:
+        print Year,Mon
+        eday = calendar.monthrange(Year,Mon)[1]
+        idtime=datetime(Year,Mon,1,0)
+        edtime=datetime(Year,Mon,eday,23)
+        lbst = ib.ret_dlonlat(idtime,edtime,lvaridx=[0]).values()
+        lbst = [item for l in lbst for item in l]  # flatten
+        a1lon, a1lat, a1tcid = map(np.array, zip(*lbst))
+        #-- Screening region ----
+        a1flaglat = ma.masked_inside(a1lat, lllat, urlat).mask
+        a1flaglon = ma.masked_inside(a1lon, lllon, urlon).mask
+        a1flag = a1flaglat * a1flaglon
+        if a1flag is np.bool_(False): continue
+        #------------------------
+        a1tcid= a1tcid[a1flag]
+        if target=='track':
+            stcid = set(a1tcid)
+            stcid = np.sort(np.array(list(stcid)))
+        elif target=='point':
+            stcid = np.sort(a1tcid)
+        else:
+            print 'check target',target
+            sys.exit()
+
+        countdir = countbasedir + '/obs'
+        util.mk_dir(countdir)
+        obspath = countdir + '/tcid.%04d.%02d.npy'%(Year,Mon)
+        np.save(obspath, stcid)
+        print 'OBS',Year,Mon,len(stcid)
+        print obspath
+
+#sys.exit()
+#----------------------------------
+miss =-9999
+miss_int= -9999
+thsst0 = 27
+exrvortout0 = 3
+tcrvortout0 = 3
+thwcore0 = 0
+thdura0  = 48
+
+slabel0 = 'sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-du-%02d'%(thsst0, exrvortout0, tcrvortout0, thwcore0, thdura0)
+
+ltcrvort = np.array([4.8])*1.0e-5
+lthwcore = np.array([0.3])
+
+#ltcrvort = np.array([3.0])*1.0e-5
+#lthwcore = np.array([0.])
+
+
+
+lkey = [[tcrvort,thwcore]
+        for tcrvort in ltcrvort
+        for thwcore in lthwcore
+        ]
+
+for (tcrvort,thwcore) in lkey:
+    tcrvortout = tcrvort*1.0e+5
+
+    d2_sim = {}
+    d2hist_sim = {}
+    for scen in lscen:
+        slabel = 'sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-du-%02d'%(thsst0, exrvortout0, tcrvortout, thwcore, thdura0)
+        #slabel = 'wceach-%s-%s-%s-sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-du-%02d'%(ctype, expr, scen, thsst, exrvortout, tcrvortout, thwcore, thdura)
+        d2hist_sim[scen] = []
+        for ens in lens:
+            if calcsim is False: continue
+
+            for Year in ly_sim:
+                for Mon in lmon:
+                    #--- Load file ---------
+                    compdir = compbasedir + '/%s/%s.%03d'%(slabel0,scen,ens)
+                    comppath =  compdir + '/%04d.%02d.pickle'%(Year,Mon)
+                    with open(comppath,'rb') as f:
+                        ddat = pickle.load(f)
+                    a1vort= ddat['vort']
+                    a1tsum= ddat['tsum']
+                    a1lat = ddat['lat']
+                    a1lon = ddat['lon']
+                    a1idate=ddat['idate']
+                    a1ipos =ddat['ipos']
+
+
+                    if a1lat.shape[0]==0:continue
+
+                    #-- Screen TC -----------
+                    a1flagvort = ma.masked_greater_equal(a1vort, tcrvort).mask
+
+                    a1flagwc   = ma.masked_greater_equal(a1tsum, thwcore).mask
+
+                    #-- Region mask ---------
+                    a1flaglat = ma.masked_inside(a1lat, lllat, urlat).mask
+                    a1flaglon = ma.masked_inside(a1lon, lllon, urlon).mask
+
+                    #------------------------
+                    a1flag = a1flagvort * a1flagwc * a1flaglat* a1flaglon
+
+                    if a1flag is np.bool_(False):
+                        continue
+
+                    a1idate = a1idate[a1flag]
+                    a1ipos  = a1ipos [a1flag]
+
+                    a1tcid_sim = ['%s-%s'%(x,y) for (x,y) in zip(a1idate, a1ipos)]
+
+                    if target=='track':
+                        stcid_sim = set(a1tcid_sim)
+                        stcid_sim = np.sort(np.array(list(stcid_sim)))
+                    elif target=='point':
+                        stcid_sim = np.sort(a1tcid_sim)
+                    else:
+                        print 'check target',target
+                        sys.exit()
+
+                    countdir = countbasedir + '/%s/%s.%03d'%(slabel, scen, ens)
+                    simpath = countdir + '/tcid.%04d.%02d.npy'%(Year,Mon)
+                    util.mk_dir(countdir)
+
+                    np.save(simpath, stcid_sim)
+                    print simpath
+
+    #********************************
+    # Monthly count
+    #--------------------------------
+    # Obs (monthly count)
+    #-------------
+    a2num_obs = []
+    for Year in ly_obs:
+        a1num_tmp = []
+        for Mon in lmon:
+            countdir = countbasedir + '/obs'
+            util.mk_dir(countdir)
+            obspath = countdir + '/tcid.%04d.%02d.npy'%(Year,Mon)
+
+            try:
+                a1tcid_tmp = np.load(obspath)
+            except IOError:
+                a1tcid_tmp = []
+            a1num_tmp.append(len(a1tcid_tmp))
+
+        a2num_obs.append(a1num_tmp)
+
+    a2num_obs = np.array(a2num_obs)
+    #-------------
+    # Sim (monthly count)
+    #-------------
+    d3num_sim = {}
+    for scen in lscen:
+        a3num_sim = []
+        slabel = 'sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-du-%02d'%(thsst0, exrvortout0, tcrvortout, thwcore, thdura0)
+
+        for ens in lens:
+            for Year in ly_sim:
+                for Mon in lmon:
+                    countdir = countbasedir + '/%s/%s.%03d'%(slabel, scen, ens)
+                    simpath = countdir + '/tcid.%04d.%02d.npy'%(Year,Mon)
+
+                    try:
+                        a1tcid_tmp = np.load(simpath)
+                    except IOError:
+                        a1tcid_tmp = []
+                    a3num_sim.append(len(a1tcid_tmp))
+
+        a3num_sim = np.array(a3num_sim).reshape(len(lens),len(ly_sim),-1)
+        d3num_sim[scen] = a3num_sim
+
+    #---------------------------
+    # Figure (mounthly count)
+    #---------------------------
+    if figmon == True:
+        cm_ens = {'HPB':'0.5','HPB_NAT':'blue'}
+        cm_ave = {'HPB':'tomato',  'HPB_NAT':'steelblue'}
+
+        fig = plt.figure(figsize=(7,4))
+        ax  = fig.add_axes([0.1,0.1,0.8,0.8])
+        a1x = np.arange(1,12+1)
+
+        a1num_obs_mean= a2num_obs.mean(axis=0)
+        a1num_his_mean= d3num_sim['HPB'].mean(axis=(0,1))
+        a1num_nat_mean= d3num_sim['HPB_NAT'].mean(axis=(0,1))
+
+        yerr_obs_lw =-np.percentile(a2num_obs, 25, axis=0) + a1num_obs_mean
+        yerr_obs_up = np.percentile(a2num_obs, 75, axis=0) - a1num_obs_mean
+
+        yerr_his_lw =-np.percentile(d3num_sim['HPB'], 25, axis=(0,1)) + a1num_his_mean
+
+        yerr_his_up = np.percentile(d3num_sim['HPB'], 75, axis=(0,1)) - a1num_his_mean
+        yerr_nat_lw =-np.percentile(d3num_sim['HPB_NAT'], 25, axis=(0,1)) + a1num_nat_mean
+        yerr_nat_up = np.percentile(d3num_sim['HPB_NAT'], 75, axis=(0,1)) - a1num_nat_mean
+
+
+        wbar = 0.25*(a1x[1] - a1x[0])
+        a1x_obs = a1x - wbar
+        a1x_nat = a1x 
+        a1x_his = a1x + wbar
+
+        ax.bar(a1x_obs, a1num_obs_mean, width=wbar, yerr=[yerr_obs_lw, yerr_obs_up], color='0.3', ecolor='k')
+        ax.bar(a1x_nat, a1num_nat_mean, width=wbar, yerr=[yerr_nat_lw, yerr_nat_up], color='steelblue', ecolor='b')
+        ax.bar(a1x_his, a1num_his_mean, width=wbar, yerr=[yerr_his_lw, yerr_his_up], color='tomato', ecolor='r')
+
+        stitle = target + '\n' + slabel + '\n' +sdomain
+        plt.title(stitle)
+        plt.show()
+
+
+    #********************************
+    # Annual count
+    #--------------------------------
+    a1bnd = np.arange(0,60+0.01,2) -0.5
+    a1cnt = 0.5*(a1bnd[1:] + a1bnd[:-1])
+    #-------------
+    # Obs (annual count)
+    #-------------
+    a1num_obs = []
+    for Year in ly_obs:
+        stcid = set() 
+        for Mon in lmon:
+            countdir = countbasedir + '/obs'
+            util.mk_dir(countdir)
+            obspath = countdir + '/tcid.%04d.%02d.npy'%(Year,Mon)
+
+            try:
+                a1tcid_tmp = np.load(obspath)
+            except IOError:
+                a1tcid_tmp = []
+            stcid = stcid.union(set(a1tcid_tmp))
+
+        a1num_obs.append(len(stcid))
+
+    a1pdf_obs = np.histogram(a1num_obs, bins=a1bnd, density=True)[0]
+    #-------------
+    # Sim (annual count)
+    #-------------
+    d2pdf_sim = {}
+    for scen in lscen:
+        a2pdf_sim = []
+
+        slabel = 'sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-du-%02d'%(thsst0, exrvortout0, tcrvortout, thwcore, thdura0)
+
+        for ens in lens:
+            a1num_sim = []
+            for Year in ly_sim:
+                stcid = set()
+                for Mon in lmon:
+                    countdir = countbasedir + '/%s/%s.%03d'%(slabel, scen, ens)
+                    simpath = countdir + '/tcid.%04d.%02d.npy'%(Year,Mon)
+
+                    try:
+                        a1tcid_tmp = np.load(simpath)
+                    except IOError:
+                        a1tcid_tmp = []
+
+                    stcid = stcid.union(set(a1tcid_tmp))
+                a1num_sim.append(len(stcid))
+
+            a1pdf_sim = np.histogram(a1num_sim, bins=a1bnd, density=True)[0]
+            a2pdf_sim.append(a1pdf_sim)
+        d2pdf_sim[scen] = np.array(a2pdf_sim)
+    #**************************************
+    # Figure (Annual count histogram)
+    #**************************************
+    if figyear==True:
+        fig = plt.figure(figsize=(7,4))
+        ax  = fig.add_axes([0.1,0.1,0.8,0.8])
+
+        a1pdf_his = d2pdf_sim['HPB'].mean(axis=0)
+        a1pdf_nat = d2pdf_sim['HPB_NAT'].mean(axis=0)
+        a1yerr_his_lw  =-np.percentile(d2pdf_sim['HPB'], 25, axis=0) + a1pdf_his
+        a1yerr_his_up  = np.percentile(d2pdf_sim['HPB'], 75, axis=0) - a1pdf_his
+        a1yerr_nat_lw  =-np.percentile(d2pdf_sim['HPB_NAT'], 25, axis=0) + a1pdf_nat
+        a1yerr_nat_up  = np.percentile(d2pdf_sim['HPB_NAT'], 75, axis=0) - a1pdf_nat
+
+        wbar = 0.25*(a1bnd[2] - a1bnd[1])
+        a1x_obs = a1cnt - wbar
+        a1x_nat = a1cnt
+        a1x_his = a1cnt + wbar
+        ax.bar(a1x_obs, a1pdf_obs, width=wbar, color='0.3')
+        ax.bar(a1x_nat, a1pdf_nat, width=wbar, yerr=[a1yerr_nat_lw, a1yerr_nat_up], color='steelblue', ecolor='b')
+        ax.bar(a1x_his, a1pdf_his, width=wbar, yerr=[a1yerr_his_lw, a1yerr_his_up], color='tomato', ecolor='r')
+
+        plt.xlim([0,30])
+        stitle = target + '\n' + slabel + '\n' +sdomain
+        plt.title(stitle)
+        plt.show()
+
+
+
+# %%
