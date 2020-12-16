@@ -37,10 +37,7 @@ expr    = 'XX'
 #lscen   = ['HPB_NAT','HPB']
 lscen   = ['HPB']
 #lscen   = ['HPB_NAT']
-lens    = list(range(16,20+1))
-#lens    = list(range(1,50+1))
-#lens    = list(range(15,50+1))
-#lens    = list(range(1,25+1))
+lens    = list(range(1,50+1))
 #lens    = list(range(21,50+1))
 #lens    = [1]
 noleap  = False
@@ -145,10 +142,7 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
 
             for YM in lYM:
                 Year,Mon = YM
-                #-- test --------
-                #if ((scen=="HPB")&(ens==1)&(datetime(Year,Mon,1,0)<=datetime(2000,9,1,0))):continue
-                #if ((scen=="HPB_NAT")&(ens==2)&(datetime(Year,Mon,1,0)<=datetime(1991,8,1,0))):continue
-                #----------------
+                if ((scen=="HPB")&(ens==1)&(datetime(Year,Mon,1,0)<=datetime(2000,9,1,0))):continue
 
                 lDTime = util.ret_lDTime_fromYM([Year,Mon],[Year,Mon], timedelta(hours=6), hour0=0)
 
@@ -168,10 +162,7 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
                 _, dtcxy_dura = cy.mkInstDictC_objTC(YM,YM,varname='dura')
                 #--------------------------    
 
-                a3prec0 = []
-                a3prec1 = []
-                a3prec2 = []
-                a3prec3 = []
+                a3prec = []
                 a3wind = []
                 a3slp  = []
                 a3land = []
@@ -187,21 +178,11 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
                 a1dura = []
 
                 for DTime in lDTime:
-                    #--- Skip first step without previous data ---
-                    if scen=="HPB":
-                        if ens<=20:
-                            if DTime <datetime(1980,1,1,12): continue  # Skip first step without previous data
-                        else:
-                            if DTime <datetime(1990,1,1,12): continue  # Skip first step without previous data
-                    elif scen=="HPB_NAT":
-                        if DTime <datetime(1990,1,1,12): continue  # Skip first step without previous data
-
-                    #--- Skip last step without next data ---
-
-                    if DTime >= datetime(2010,12,31,12): continue  # Skip first step without previous data
+                    if ens<=20:
+                        if DTime ==datetime(1980,1,1,0): continue  # Skip first step without previous data
+                    else:
+                        if DTime ==datetime(1990,1,1,0): continue  # Skip first step without previous data
                     #print(DTime)
-
-
                     #--------------------------
                     ltcxy      = dtcxy[DTime]
                     ltcxy_wc   = dtcxy_wc[DTime] 
@@ -254,72 +235,61 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
                     a1idate= a1idate+ lidatetmp.tolist()
                     a1dura = a1dura + lduratmp.tolist()
 
-                    #-- load d4PDF variables -----
-                    """ Forward 6-hour precipitation """
+                    ##-- load d4PDF variables -----
+                    #a2prec0 = d4sfc.load_6hr(vname='PRECIPI', scen=scen, ens=ens, DTime=DTime-timedelta(hours=6))
+                    #a2prec1 = d4sfc.load_6hr(vname='PRECIPI', scen=scen, ens=ens, DTime=DTime)
+                    #a2prec2 = d4sfc.load_6hr(vname='PRECIPI', scen=scen, ens=ens, DTime=DTime+timedelta(hours=6))
+                    #a2prec  = (a2prec0 + a2prec1 + a2prec2)*60*60 /3.
 
-                    a2prec0= d4sfc.load_6hr(vname='PRECIPI', scen=scen, ens=ens, DTime=DTime + timedelta(hours=-12))   # kg/m2/sec
-                    a2prec1= d4sfc.load_6hr(vname='PRECIPI', scen=scen, ens=ens, DTime=DTime + timedelta(hours=-6))    # kg/m2/sec
-                    a2prec2= d4sfc.load_6hr(vname='PRECIPI', scen=scen, ens=ens, DTime=DTime + timedelta(hours=0))    # kg/m2/sec
-                    a2prec3= d4sfc.load_6hr(vname='PRECIPI', scen=scen, ens=ens, DTime=DTime + timedelta(hours=6))    # kg/m2/sec
+                    #a2u    = d4sfc.load_6hr(vname='UAOPN', scen=scen, ens=ens, DTime=DTime)
+                    #a2v    = d4sfc.load_6hr(vname='VAOPN', scen=scen, ens=ens, DTime=DTime)
+                    #a2slp  = d4sfc.load_6hr(vname='PS',    scen=scen, ens=ens, DTime=DTime)
+                    #a2wind = np.sqrt(a2u**2 + a2v**2)
 
-                    a2u    = d4sfc.load_6hr(vname='UAOPN', scen=scen, ens=ens, DTime=DTime)
-                    a2v    = d4sfc.load_6hr(vname='VAOPN', scen=scen, ens=ens, DTime=DTime)
-                    a2slp  = d4sfc.load_6hr(vname='PS',    scen=scen, ens=ens, DTime=DTime)
-                    a2wind = np.sqrt(a2u**2 + a2v**2)
-
-                    for i in range(len(lxtmp)):
-                        y = lytmp[i]
-                        x = lxtmp[i]
+                    #for i in range(len(lxtmp)):
+                    #    y = lytmp[i]
+                    #    x = lxtmp[i]
     
-                        iy = y-dgridy
-                        ey = y+dgridy
-                        ix = x-dgridx
-                        ex = x+dgridx
+                    #    iy = y-dgridy
+                    #    ey = y+dgridy
+                    #    ix = x-dgridx
+                    #    ex = x+dgridx
     
-                        a2prectmp0= a2prec0[iy:ey+1,ix:ex+1]
-                        a2prectmp1= a2prec1[iy:ey+1,ix:ex+1]
-                        a2prectmp2= a2prec2[iy:ey+1,ix:ex+1]
-                        a2prectmp3= a2prec3[iy:ey+1,ix:ex+1]
-                        a2windtmp = a2wind[iy:ey+1,ix:ex+1]
-                        a2slptmp  = a2slp [iy:ey+1,ix:ex+1]
-                        a2landtmp = a2land[iy:ey+1,ix:ex+1]
+                    #    a2prectmp = a2prec[iy:ey+1,ix:ex+1]
+                    #    a2windtmp = a2wind[iy:ey+1,ix:ex+1]
+                    #    a2slptmp  = a2slp [iy:ey+1,ix:ex+1]
+                    #    a2landtmp = a2land[iy:ey+1,ix:ex+1]
 
-                        a3prec0.append(a2prectmp0)
-                        a3prec1.append(a2prectmp1)
-                        a3prec2.append(a2prectmp2)
-                        a3prec3.append(a2prectmp3)
-                        a3wind.append(a2windtmp)
-                        a3slp .append(a2slptmp)
-                        a3land.append(a2landtmp)
+                    #    a3prec.append(a2prectmp)
+                    #    a3wind.append(a2windtmp)
+                    #    a3slp .append(a2slptmp)
+                    #    a3land.append(a2landtmp)
 
-                        a1time.append(DTime) 
+                    #    a1time.append(DTime) 
 
-                dout = {}
-                dout['prec-12']= np.array(a3prec0)
-                dout['prec-06']= np.array(a3prec1)
-                dout['prec000']= np.array(a3prec2)
-                dout['prec006']= np.array(a3prec3)
-                dout['wind']= np.array(a3wind)
-                dout['slp' ]= np.array(a3slp)
-                dout['land']= np.array(a3land)
-                dout['vort']= np.array(a1vort)
-                dout['tsum']= np.array(a1tsum)
-                dout['wup' ]= np.array(a1wup)
-                dout['wlw' ]= np.array(a1wlw)
-                dout['lat' ]= np.array(a1lat)
-                dout['lon' ]= np.array(a1lon)
-                dout['time']= np.array(a1time)
-                dout['ipos']= np.array(a1ipos)
-                dout['idate']= np.array(a1idate)
-                dout['dura']= np.array(a1dura)
+                #dout = {}
+                #dout['prec']= np.array(a3prec)
+                #dout['wind']= np.array(a3wind)
+                #dout['slp' ]= np.array(a3slp)
+                #dout['land']= np.array(a3land)
+                #dout['vort']= np.array(a1vort)
+                #dout['tsum']= np.array(a1tsum)
+                #dout['wup' ]= np.array(a1wup)
+                #dout['wlw' ]= np.array(a1wlw)
+                #dout['lat' ]= np.array(a1lat)
+                #dout['lon' ]= np.array(a1lon)
+                #dout['time']= np.array(a1time)
+                #dout['ipos']= np.array(a1ipos)
+                #dout['idate']= np.array(a1idate)
+                #dout['dura']= np.array(a1dura)
 
-                #--- Save file ---------
-                compdir = compbasedir + '/%s/%s.%03d/%04d'%(slabel,scen,ens,Year)
-                util.mk_dir(compdir)
+                ##--- Save file ---------
+                #compdir = compbasedir + '/%s/%s.%03d/%04d'%(slabel,scen,ens,Year)
+                #util.mk_dir(compdir)
    
-                for vname in list(dout.keys()): 
-                    comppath =  compdir + '/%s.%04d.%02d.npy'%(vname,Year,Mon)
-                    np.save(comppath, dout[vname]) 
-                print(comppath)
+                #for vname in list(dout.keys()): 
+                #    comppath =  compdir + '/%s.%04d.%02d.npy'%(vname,Year,Mon)
+                #    np.save(comppath, dout[vname]) 
+                #print(comppath)
 
 # %%

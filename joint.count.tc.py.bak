@@ -53,7 +53,7 @@ lthwdif = [-9999,-30,-10]
 
 
 for region in lregion:
-    print(region)
+    print region
     [[lllat,lllon],[urlat,urlon]] = dbbox[region]
 
     lkey = [[thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif]
@@ -65,7 +65,10 @@ for region in lregion:
             for thwind in lthwind
             for thwdif in lthwdif
             ]
-    print(len(lkey))
+    exrvortout = exrvort*1.0e+5
+    tcrvortout = tcrvort*1.0e+5
+
+    print len(lkey)
     #------------------------------
     # Monthly
     #------------------------------
@@ -75,10 +78,7 @@ for region in lregion:
         i=i+1
 
         [thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif] = key
-
-        exrvortout = exrvort*1.0e+5
-        tcrvortout = tcrvort*1.0e+5
-
+    
         #slabel = 'sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-wind-%02d-wdif-%d-du-%02d'%(thsst, exrvortout, tcrvortout, thwcore, thwind, thwdif, thdura)
         slabel = 'sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-wind-%02d-wdif-%d-du-%02d'%(thsst*10, exrvortout, tcrvortout, thwcore, thwind, thwdif, thdura)
 
@@ -120,7 +120,7 @@ for region in lregion:
     oimg    = Image.fromarray(a2oarray)
     outpath = figdir + '/joint.count.mon.%s.%s.png'%(target, region)
     oimg.save(outpath)
-    print(outpath)
+    print outpath
 
     #------------------------------
     # Annual
@@ -166,7 +166,7 @@ for region in lregion:
     oimg    = Image.fromarray(a2oarray)
     outpath = figdir + '/joint.count.year.%s.%s.png'%(target, region)
     oimg.save(outpath)
-    print(outpath)
+    print outpath
 
     
     

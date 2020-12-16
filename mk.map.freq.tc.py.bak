@@ -11,20 +11,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 import util
 import calendar
-import Cyclone
 #--------------------------------------
 #calcbst= True
 calcbst= False
-#figbst = True
-figbst = False
+figbst = True
+#figbst = False
 
-#calcobj= True
-calcobj= False
+calcobj= True
+#calcobj= False
 #figobj = True
 figobj = False
 
-figmean = True
-#figmean = False
+#figmean = True
+figmean = False
 
 ctype = 'TC'
 #ctype = 'ALL'
@@ -46,26 +45,25 @@ model   = "__"
 expr    = 'XX'
 scen    = 'HPB' # run={expr}-{scen}-{ens}
 #scen    = 'HPB_NAT' # run={expr}-{scen}-{ens}
-lens    = range(1,20+1)
-#lens    = [20]
+#lens    = range(1,9+1)
+#lens    = range(1,10+1)
 #lens    = range(10,30+1)
 #lens    = range(10,12+1)
 #lens    = range(10,13+1)
 #lens    = range(1,10+1)
 #lens    = [11,12,16,17]
 #lens    = [13,14,18,19]
-#lens    = [15]
+lens    = [15]
 #lens    = range(3,9+1)
 res     = "320x640"
 noleap  = False
 
 
-detectName = 'wsd_d4pdf_20201209-py38'
-#detectName = 'wsd_d4pdf_20200813'
+detectName = 'wsd_d4pdf_20200813'
 #detectName = 'detect_20200401'
 #config      = import_module("%s.config"%(detectName))
 ConstCyclone= import_module("%s.ConstCyclone"%(detectName))
-#Cyclone     = import_module("%s.Cyclone"%(detectName))  # test
+Cyclone     = import_module("%s.Cyclone"%(detectName))
 d4PDF       = import_module("%s.d4PDF"%(detectName))
 IBTrACS     = import_module("%s.IBTrACS"%(detectName))
 
@@ -166,7 +164,7 @@ lYMbst = util.ret_lYM([iYbst,1],[eYbst,12])
 for (Year,Mon) in lYMbst:
     YM = (Year,Mon)
     if calcbst is not True: continue
-    print((Year,Mon))
+    print(Year,Mon)
 
     lDTimeBst = util.ret_lDTime_fromYM(YM, YM, timedelta(hours=6), 0)
     iDTimeBst = lDTimeBst[0]
@@ -201,10 +199,11 @@ for (Year,Mon) in lYMbst:
     bstdir = outbaseDir + '/bst'
     util.mk_dir(bstdir)
 
-    for vname in list(dbst.keys()):
-        bstPath= bstdir + '/%s.tc.bst.%04d.%02d.npy'%(vname,Year,Mon)
-        np.save(bstPath, dbst[vname] ) 
-        print(bstPath)
+    bstPath= bstdir + '/freq.tc.bst.%04d.%02d.pickle'%(Year,Mon)
+    with open(bstPath,'wb') as f:
+        pickle.dump(dbst, f)
+    print(bstPath)
+
 
 #-- Figure (best track)
 if figbst is True:
@@ -212,12 +211,13 @@ if figbst is True:
     nstep   = 0
     for (Year,Mon) in lYMbst:
         bstdir = outbaseDir + '/bst'
+        bstPath= bstdir + '/freq.tc.bst.%04d.%02d.pickle'%(Year,Mon)
     
-        a2countTmp = np.load(bstdir + '/a2count.tc.bst.%04d.%02d.npy'%(Year,Mon))
-        nstepTmp   = np.load(bstdir + '/nstep.tc.bst.%04d.%02d.npy'%(Year,Mon))
-
-        a2count = a2count + a2countTmp
-        nstep   = nstep   + nstepTmp
+        with open(bstPath, 'rb') as f:
+            dbst = pickle.load(f)
+    
+        a2count = a2count + dbst['a2count']
+        nstep   = nstep   + dbst['nstep']
     
     a2fig = a2count.astype('float32') / nstep
     a2fig = ma.masked_less(a2fig,0)*4*365  # times/year
@@ -255,7 +255,6 @@ lkey = [[thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif]
         for thwdif in lthwdif
         ]
 
-
 for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
     const  = ConstCyclone.Const(prj=prj, model=model)
     const['Lat'] = d4PDF.Lat()
@@ -285,7 +284,7 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
             lDTime = util.ret_lDTime(iDTime,eDTime,timedelta(hours=6))
 
             ltclonlat = []
-            print(('ens=',ens))
+            print('ens=',ens)
             #-------------------
             wsDir= wsbaseDir + '/%s-%s-%03d'%(expr, scen, ens)
  
@@ -297,7 +296,7 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
                 ltcxy = ltcxy + ltmp
 
             #-------------
-            if ctype == 'ALL': 
+            if ctype is 'ALL': 
                 for ltmp in list(dexcxy.values()):
                     ltcxy = ltcxy + ltmp
             #-------------
@@ -332,14 +331,10 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
             #-- Save --------
             outDir = outbaseDir + '/%s/%s-%03d'%(slabel, scen, ens)
             util.mk_dir(outDir)
-            ##objPath= outDir + '/freq.tc.obj.en-%03d.%04d.%02d.pickle'%(ens,Year,Mon)
-            #with open(objPath,'wb') as f:
-            #    pickle.dump(dobj, f)
-            #print(objPath)
-
-            for vname in dobj.keys():
-                objPath= outDir + '/%s.tc.obj.%04d.%02d.npy'%(vname,Year,Mon)
-                np.save(objPath, dobj[vname])
+            objPath= outDir + '/freq.tc.obj.en-%03d.%04d.%02d.pickle'%(ens,Year,Mon)
+            if calcobj is True:
+                with open(objPath,'wb') as f:
+                    pickle.dump(dobj, f)
                 print(objPath)
 
         #------------------------
@@ -351,17 +346,14 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
             for (Year,Mon) in lYM:
     
                 outDir = outbaseDir + '/%s/%s-%03d'%(slabel, scen, ens)
-
-
-                #objPath= outDir + '/freq.tc.obj.en-%03d.%04d.%02d.pickle'%(ens,Year,Mon)
-                #with open(objPath, 'rb') as f:
-                #    dobj = pickle.load(f)
-   
-                a2countTmp = np.load(outDir + '/a2count.tc.obj.%04d.%02d.npy'%(Year,Mon))
-                nstepTmp   = np.load(outDir + '/nstep.tc.obj.%04d.%02d.npy'%(Year,Mon))
- 
-                a2count = a2count + a2countTmp
-                nstep   = nstep   + nstepTmp
+                objPath= outDir + '/freq.tc.obj.en-%03d.%04d.%02d.pickle'%(ens,Year,Mon)
+    
+    
+                with open(objPath, 'rb') as f:
+                    dobj = pickle.load(f)
+    
+                a2count = a2count + dobj['a2count']
+                nstep   = nstep   + dobj['nstep']
     
     
             a2fig = a2count.astype('float32')/nstep
@@ -383,19 +375,16 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
     if figmean is True:
         for ens in lens:
             for (Year,Mon) in lYM:
-   
-                print(ens,Year,Mon) 
-                outDir = outbaseDir + '/%s/%s-%03d'%(slabel, scen, ens)
-                #objPath= outDir + '/freq.tc.obj.en-%03d.%04d.%02d.pickle'%(ens,Year,Mon)
-                #with open(objPath, 'rb') as f:
-                #    dobj = pickle.load(f)
-
-                a2countTmp = np.load(outDir + '/a2count.tc.obj.%04d.%02d.npy'%(Year,Mon))
-                nstepTmp   = np.load(outDir + '/nstep.tc.obj.%04d.%02d.npy'%(Year,Mon))
     
-                a2count = a2count + a2countTmp
-                nstep   = nstep   + nstepTmp
-
+                outDir = outbaseDir + '/%s/%s-%03d'%(slabel, scen, ens)
+                objPath= outDir + '/freq.tc.obj.en-%03d.%04d.%02d.pickle'%(ens,Year,Mon)
+    
+                with open(objPath, 'rb') as f:
+                    dobj = pickle.load(f)
+    
+                a2count = a2count + dobj['a2count']
+                nstep   = nstep   + dobj['nstep']
+    
         a2fig = a2count.astype('float32') / nstep
         a2fig = ma.masked_less(a2fig,0)*4*365  # times/10-year
     

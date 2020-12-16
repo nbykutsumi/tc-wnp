@@ -44,7 +44,10 @@ lkey = [[thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif]
         for thwind in lthwind
         for thwdif in lthwdif
         ]
-print(len(lkey))
+exrvortout = exrvort*1.0e+5
+tcrvortout = tcrvort*1.0e+5
+
+print len(lkey)
 
 i = -1
 ddat = {}
@@ -52,9 +55,6 @@ for key in lkey:
     i=i+1
 
     [thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif] = key
-
-    exrvortout = exrvort*1.0e+5
-    tcrvortout = tcrvort*1.0e+5
 
     #slabel = 'sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-wind-%02d-wdif-%d-du-%02d'%(thsst, exrvortout, tcrvortout, thwcore, thwind, thwdif, thdura)
     slabel = 'sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-wind-%02d-wdif-%d-du-%02d'%(thsst*10, exrvortout, tcrvortout, thwcore, thwind, thwdif, thdura)
@@ -91,7 +91,7 @@ a2oarray = np.concatenate(a2oarray, axis=0)
 oimg    = Image.fromarray(a2oarray)
 outpath = figdir + '/joint.map.freq.tc.obj.%04d-%04d.ave.png'%(iY, eY)
 oimg.save(outpath)
-print(outpath)
+print outpath
 
 
 

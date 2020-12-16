@@ -1,1 +1,1 @@
-/home/utsumi/bin/wsd_d4pdf_20200428/config.py
+/home/utsumi/bin/wsd_d4pdf_20201209-py38/config.py

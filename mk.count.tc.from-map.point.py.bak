@@ -28,15 +28,15 @@ figyear= True
 target='point'
 
 #ly_sim = range(2000,2010+1)
-ly_sim = list(range(1980,2010+1))
+ly_sim = range(1980,2010+1)
 #ly_obs = range(1989,1989+1)
 #ly_obs = range(1980,2018+1)
 #ly_obs = range(1980,2018+1)
 #ly_obs = range(1980,2018+1)
-ly_obs = list(range(1980,2010+1))
+ly_obs = range(1980,2010+1)
 #ly_obs = range(2000,2010+1)
 #lmon= range(1,12+1)
-lmon= list(range(1,12+1))
+lmon= range(1,12+1)
 
 lregion = ['WNP', 'NEA','NNEA']
 dbbox = {
@@ -62,8 +62,7 @@ expr    = 'XX'
 #lscen   = ['HPB','HPB_NAT']
 lscen   = ['HPB']
 #lscen   = ['HPB_NAT']
-#lens    = list(range(1,19+1))
-lens    = list(range(1,20+1))
+lens    = range(1,19+1)
 #lens    = [1,2,3]
 res     = "320x640"
 noleap  = False
@@ -127,7 +126,7 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
 
 
     for region in lregion:
-        print(region)
+        print region
         [[lllat,lllon],[urlat,urlon]] = dbbox[region]
 
         sdomain = 'lat.%03d-%03d.lon.%04d-%04d'%(lllat,urlat,lllon,urlon)
@@ -183,7 +182,7 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
                     a1num_tmp = []
                     for Mon in lmon:
 
-                        print(region,scen,ens,Year,Mon)
+                        print region,scen,ens,Year,Mon
                         #-- load --------
                         outDir = outbaseDir + '/%s/%s-%03d'%(slabel, scen, ens)
                         #objPath= outDir + '/freq.tc.obj.en-%03d.%04d.%02d.pickle'%(ens,Year,Mon)
@@ -244,7 +243,7 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
             figpath = figdir + '/count.mon.%s.%s.%s.png'%(target, slabel, region)
             plt.savefig(figpath)
    
-            print(figpath) 
+            print figpath 
     
         #********************************
         # Annual count
@@ -357,7 +356,7 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
             #plt.show()
             figpath = figdir + '/count.year.%s.%s.%s.png'%(target, slabel, region)
             plt.savefig(figpath)
-            print(figpath)
+            print figpath
 
 
 
