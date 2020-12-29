@@ -1,22 +1,25 @@
 # %%
-import matplotlib
 import matplotlib.pyplot as plt
+#%matplotlib inline
+
 import numpy as np
-%matplotlib inline
+from math import sin, cos, acos
+import myfunc.util as util
+from myfunc.util import  calc_dist_gc
+import os, sys
+from detect_fsub import *
 
-prec = np.load('/home/utsumi/mnt/lab_tank/utsumi/hometemp/bams2020/composite/obs-era5-tc/1980/prec.1980.07.npy')
-wind = np.load('/home/utsumi/mnt/lab_tank/utsumi/hometemp/bams2020/composite/obs-era5-tc/1980/wind.1980.07.npy')
+ny,nx = 320, 640
+a1xpy = np.array([200, 200,250])
+a1ypy = np.array([20,  100,150])
+a2table = np.load("./tab.dydx4mask.d4PDF.nrady-008.0500km.npy")
 
-a2prec=prec.mean(axis=0)
-a2wind=wind.mean(axis=0)
-plt.imshow(a2prec,origin='lower')
-plt.plot(9,9,'x')
-plt.colorbar()
+a2out = detect_fsub.mk_a2mask_with_table(a2table.T, a1xpy, a1ypy, nx, ny).T
+
+plt.imshow(a2out, origin="lower")
 plt.show()
-
-plt.imshow(a2wind,origin='lower')
-plt.plot(9,9,'x')
-plt.colorbar()
-plt.show()
+print(a2out.shape)
+print(a2out)
+print(a2out.max())
 
 # %%
