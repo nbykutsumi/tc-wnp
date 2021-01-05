@@ -26,14 +26,15 @@ prj     = "d4PDF"
 model   = "__"
 expr    = 'XX'
 #lscen    = ["HPB","HPB_NAT"] # run={expr}-{scen}-{ens}
-lscen    = ["HPB"] # run={expr}-{scen}-{ens}
-#lscen    = ["HPB_NAT"] # run={expr}-{scen}-{ens}
-#lens    = range(1,20+1)
-#lens    = range(2,20+1)
-#lens    = range(11,50+1)
-lens    = range(21,50+1)
+#lscen    = ["HPB"] # run={expr}-{scen}-{ens}
+lscen    = ["HPB_NAT"] # run={expr}-{scen}-{ens}
+#lens    = range(21,50+1)
+lens    = range(3,50+1)
+#lens    = range(1,2+1)
+#lens    = range(38,50+1)
+#lens    = range(41,50+1)
 #lens    = range(1,50+1)
-#lens    = [20]
+#lens    = [1]
 #lens    = range(3,9+1)
 res     = "320x640"
 noleap  = False
@@ -68,6 +69,26 @@ miss_int= -9999
 
 lvar = ["dtlw","dtmd","dtup","lat","lon","slp","slp_mean_adj","slp_mean_box","vortlw","vortlw_max_box","wmaxlw","wmaxup","x","y"]
 
+ddtype={
+"dtlw": float32,
+"dtmd": float32,
+"dtup": float32,
+"initland": float32,
+"initsst": float32,
+"lat": float32,
+"lon": float32,
+"slp": float32,
+"slp_mean_adj": float32,
+"slp_mean_box": float32,
+"vortlw": float32,
+"vortlw_max_box": float32,
+"wmaxlw": float32,
+"wmaxup": float32,
+"dura":int32,
+"x": int32,
+"y": int32,
+"tcmask":bool,
+}
 #lvar = lvar[:1]
 #lMon = lMon[:1]
 #lens = lens[:1]
@@ -137,21 +158,25 @@ for scen in lscen:
 
                         for var in lvar:
                             aout = np.asarray(dout[var][(idate,ipos)])
-                            opath= odir + "/%s.%s.%s.npy"%(var,idate,ipos)
-                            np.save(opath, aout)
-
+                            opath= odir + "/%s.%s.%s.bn"%(var,idate,ipos)
+                            aout.astype(ddtype[var]).tofile(opath)
+                            #np.save(opath, aout)
                         #-- single variables ---
                         iland = ailand[i]
                         isst  = aisst[i]
 
-                        odurapath  = odir + "/dura.%s.%s.npy"%(idate,ipos)
-                        oilandpath = odir + "/initland.%s.%s.npy"%(idate,ipos)
-                        oisstpath  = odir + "/initsst.%s.%s.npy"%(idate,ipos)
+                        odurapath  = odir + "/dura.%s.%s.bn"%(idate,ipos)
+                        oilandpath = odir + "/initland.%s.%s.bn"%(idate,ipos)
+                        oisstpath  = odir + "/initsst.%s.%s.bn"%(idate,ipos)
 
-                        np.save(odurapath, dura)
-                        np.save(oilandpath, iland)
-                        np.save(oisstpath, isst)
-
+                        dura.astype(ddtype["dura"]).tofile(odurapath)
+                        iland.astype(ddtype["initland"]).tofile(oilandpath)
+                        isst.astype(ddtype["initsst"]).tofile(oisstpath)
+                        
+                        #np.save(odurapath, dura)
+                        #np.save(oilandpath, iland)
+                        #np.save(oisstpath, isst)
+                        #sys.exit()
 
                         del dout[var][(idate,ipos)]
                 print(odir)

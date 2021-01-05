@@ -57,12 +57,6 @@ dlonsub  = 5
 llatsub0 = np.arange(5,40+0.1,dlatsub)[::-1]
 llonsub0 = np.arange(105,145+0.1,dlonsub)
 
-##lsubregion = ["30-45","20-30"]
-#lsubregion = 
-#dsubbox = {"30-45":[[30,115],[45,145]],
-#           "20-30":[[20,105],[30,130]],
-#}
-
 detectName = 'wsd_d4pdf_20201209-py38'
 #detectName = 'wsd_d4pdf_20200813'
 #detectName = 'detect_20200401'
@@ -168,47 +162,68 @@ for scen in lscen:
 #**********************************
 # Draw histogram 
 #**********************************
-bnd = np.arange(0,600+1,10)
+bnd = np.arange(0,1200+1,20)
 bndcnt=(bnd[1:] + bnd[:-1])*0.5
 print("draw")
-fig = plt.figure(figsize=(10,12))
-nline= 8
-nrow = 9
-for iregion,subregion in enumerate(lsubregion):
-    ax = fig.add_subplot(nline,nrow,iregion+1)
-    plt.title(subregion)
+for norm in ["org","norm"]:
+    ncol = 9
+    nrow = 8
 
-    for scen in lscen:
-        print("plot",subregion,scen)
-        a1vect = []
-        for ens in lens:
-            vectdir = precbasedir + "/vect/%s.d%02d.d%02d.%04d-%04d/%s.%03d"%(meanflag,dlatsub,dlonsub,iY,eY,scen,ens)
+    if norm=="org":
+        fig, axs = plt.subplots(nrows=nrow, ncols=ncol, figsize=(20,20))
+    elif norm=="norm":
+        fig, axs = plt.subplots(nrows=nrow, ncols=ncol, sharey=True, figsize=(20,20))
 
-            vectpath = vectdir + "/tc-prec.%s.npy"%(subregion)
-            a1vect.extend(np.load(vectpath))
+    axs = axs.flatten()
+    for isub,subregion in enumerate(lsubregion):
+        ax = axs[isub]
 
-        a1freq, _ = np.histogram(a1vect, bins=bnd, density=True)
-        if scen=="HPB":
-            a1his = a1freq
-        elif scen=="HPB_NAT":
-            a1nat = a1freq
-        else:
-            print("check scen",scen)
-            sys.exit()
-    #ax.bar(bndcnt, a1his, alpha=0.5, color="red", log=True)
-    #ax.bar(bndcnt, a1nat, alpha=0.5, color="blue", log=True)
-    ax.plot(bndcnt, a1his, color="red")
-    ax.plot(bndcnt, a1nat, color="blue")
-    ax.set_yscale("log")
+        for scen in lscen:
+            print("plot",subregion,scen)
+            a1vect = []
+            for ens in lens:
+                vectdir = precbasedir + "/vect/%s.d%02d.d%02d.%04d-%04d/%s.%03d"%(meanflag,dlatsub,dlonsub,iY,eY,scen,ens)
 
+                vectpath = vectdir + "/tc-prec.%s.npy"%(subregion)
+                a1vect.extend(np.load(vectpath))
 
+            a1freq, _ = np.histogram(a1vect, bins=bnd, density=False)
+            if scen=="HPB":
+                a1his = a1freq
+            elif scen=="HPB_NAT":
+                a1nat = a1freq
+            else:
+                print("check scen",scen)
+                sys.exit()
 
-figdir = "/home/utsumi/temp/bams2020/fig/pdf"
-figpath= figdir + "/hist.mul.tc-prec.png"
-util.mk_dir(figdir)
-plt.savefig(figpath)
-print(figpath)
-plt.show()
+        slllat,slllon = subregion.split(".")
+        stitle = "lat:%s lon:%s"%(slllat,slllon)
+        ax.set_title(stitle)
+
+        wbar = bnd[1] - bnd[0]
+        ax.bar(bndcnt, a1his, width=wbar, alpha=0.5, color="red", log=True)
+        ax.bar(bndcnt, a1nat, width=wbar, alpha=0.5, color="blue", log=True)
+        #ax.plot(bndcnt, a1his, color="red")
+        #ax.plot(bndcnt, a1nat, color="blue")
+        #ax.set_yscale("log")
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96])  # save space for suptitle
+
+    ssuptitle = "precip rate [mm/day] %04d-%04d ens:%03d-%03d"%(iY, eY, lens[0],lens[-1])
+    plt.suptitle(ssuptitle)
+    
+
+    figdir = "/home/utsumi/temp/bams2020/fig/pdf-tc-var"
+    util.mk_dir(figdir)
+
+    figpath= figdir + "/hist.mul.tc-prec.%s.png"%(norm)
+    plt.savefig(figpath)
+
+    figpath= figdir + "/hist.mul.tc-prec.%s.pdf"%(norm)
+    plt.savefig(figpath)
+
+    print(figpath)
+    plt.show()
 
 
 #

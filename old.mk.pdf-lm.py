@@ -35,7 +35,7 @@ lscen    = ["HPB","HPB_NAT"] # run={expr}-{scen}-{ens}
 #lens    = range(1,20+1)
 #lens    = range(21,50+1)
 #lens    = range(1,50+1)
-lens    = range(1,7+1)
+lens    = range(1,2+1)
 vname = "wmaxlw"
 
 detectName = 'wsd_d4pdf_20201209-py38'

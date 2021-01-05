@@ -7,7 +7,7 @@ import cartopy.crs as ccrs
 import matplotlib.ticker as mticker
 
 #----------------------------------
-import sys, os, shutil, pickle
+import sys, os, shutil, socket
 from   numpy import *
 from   datetime import datetime, timedelta
 from   importlib import import_module
@@ -32,17 +32,45 @@ expr    = 'XX'
 lscen    = ["HPB","HPB_NAT"] # run={expr}-{scen}-{ens}
 #lscen    = ["HPB"] # run={expr}-{scen}-{ens}
 #lscen    = ["HPB_NAT"] # run={expr}-{scen}-{ens}
-#lens    = range(1,20+1)
-#lens    = range(21,50+1)
-#lens    = range(1,50+1)
-lens    = range(1,7+1)
+lens    = range(1,50+1)
 vname = "wmaxlw"
+#vname = "dslp"
+
+ddtype={
+"dtlw": float32,
+"dtmd": float32,
+"dtup": float32,
+"initland": float32,
+"initsst": float32,
+"lat": float32,
+"lon": float32,
+"slp": float32,
+"slp_mean_adj": float32,
+"slp_mean_box": float32,
+"vortlw": float32,
+"vortlw_max_box": float32,
+"wmaxlw": float32,
+"wmaxup": float32,
+"dura":int32,
+"x": int32,
+"y": int32,
+"tcmask":bool,
+"dslp":float32,
+}
+
 
 detectName = 'wsd_d4pdf_20201209-py38'
 d4PDF       = import_module("%s.d4PDF"%(detectName))
 
+hostname = socket.gethostname()
+if hostname=="shui":
+    wsbaseDir = '/tank/utsumi/WS/d4PDF_GCM'
+elif hostname=="well":
+    wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
+else:
+    print("check hostname",hostname)
+    sys.exit()
 
-wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
 outbasedir = '/home/utsumi/temp/bams2020/tc-wise-WNP'
 #util.mk_dir(outbaseDir)
 figdir  = '/home/utsumi/temp/bams2020/fig/pdf-tc-var'
@@ -73,37 +101,21 @@ exrvortout = exrvort*1.0e+5
 tcrvortout = tcrvort*1.0e+5
 
 slabel = 'sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-wind-%02d-wdif-%d-du-%02d'%(thsstdeg*10, exrvortout, tcrvortout, thwcore, thwind, thwdif, thdura)
-
+#---- PDF ---------------
 for scen in lscen:
     adatall = deque([])
-    for iens,ens in enumerate(lens):
-        adat = deque([]) 
+    for iens, ens in enumerate(lens):
+        #-- Load --------
+        lmbasedir = "/home/utsumi/temp/bams2020/tc-lm/%s/%s.lat%03d-%03d.lon%03d-%03d"%(slabel,season,lllat,urlat,lllon,urlon)
+        lmdir = lmbasedir + "/%s.%03d"%(scen,ens)
 
-        for Year in lYear:
-            print(scen,ens,Year)
+        adat = np.concatenate([np.fromfile(lmdir + "/lat.%s.%04d.bn"%(vname,Year) , ddtype[vname]) for Year in lYear])
 
-            #-- save --
-            lmbasedir = '/home/utsumi/temp/bams2020/lm-WNP'
-            lmdir = lmbasedir + "/%s/%s.lat%03d-%03d.lon%03d-%03d/%s.%03d"%(slabel,season,lllat,urlat,lllon,urlon,scen,ens) 
-            lmpath    = lmdir + "/lm.%s.%04d.npy"%(vname,Year)
-
-            adattmp = np.load(lmpath)  
-            adat.extend(adattmp) 
-
-        adatall.extend(adattmp)
-        adat = np.array(adat)
-
+        adatall.extend(adat)
         #-- histogram ---
-        if vname=="dslp":
-            abnd = np.arange(0,25,0.5)
-            acnt = (abnd[:-1] + abnd[1:])*0.5
+        abnd = d4PDF.LatBnd()[160:280]
+        acnt = (abnd[:-1] + abnd[1:])*0.5
 
-        elif vname=="wmaxlw":
-            abnd = np.arange(12,100,2)
-            acnt= (abnd[:-1] + abnd[1:])*0.5
-        else:
-            print("check vname",vname)
-            sys.exit()
         #----------------
         acount, _ = np.histogram(adat, abnd, density=False)
         arfreq, _ = np.histogram(adat, abnd, density=True)
@@ -111,27 +123,67 @@ for scen in lscen:
         if iens==0:
             a2count = np.zeros([len(lens),len(acnt)])
             a2rfreq = np.zeros([len(lens),len(acnt)])
-        
+
         a2count[iens] = acount
         a2rfreq[iens] = arfreq
 
+    print(scen,a2count.mean())
+
     adatall = np.array(adatall)
+    acountall, _ = np.histogram(adatall, abnd, density=False)
+    arfreqall, _ = np.histogram(adatall, abnd, density=True)
+
+
     if scen=="HPB":
         a2count_his = a2count
         a2rfreq_his = a2rfreq
+        a1countall_his = acountall
+        a1rfreqall_his = arfreqall
         avehis = adatall.mean()
 
     elif scen=="HPB_NAT":
         a2count_nat = a2count
         a2rfreq_nat = a2rfreq
+        a1countall_nat = acountall
+        a1rfreqall_nat = arfreqall
         avenat = adatall.mean()
 
     else:
         print("check scen",scen)
         sys.exit()
 
+print(a2count_his.mean(), a2count_nat.mean())
 
-#--- draw -------
+
+#--- draw (bar) -------
+fig = plt.figure(figsize=(6,6))
+for i,density in enumerate([True, False]):
+    ax  = fig.add_subplot(2,1,i+1)
+    if density==True:
+        a1his = a1rfreqall_his
+        a1nat = a1rfreqall_nat
+
+    else:
+        a1his = a1countall_his
+        a1nat = a1countall_nat
+
+    ax.bar(acnt, a1his, width=0.6, alpha=0.3, color="red")
+    ax.bar(acnt, a1nat, width=0.6, alpha=0.3, color="blue")
+
+    ax.axvline(avehis, linestyle="-", linewidth=1, color="red")
+    ax.axvline(avenat, linestyle="-", linewidth=1, color="blue")
+
+    ax.set_yscale("log")
+    stitle = "LM Lat (%s) %04d-%04d ens:%03d-%03d"%(vname, iY, eY, lens[0],lens[-1]) + "\nlat:%03d-%03d lon:%03d-%03d"%(lllat,urlat, lllon, urlon)
+
+    figpath = figdir + "/bar.lm-lat.%s.lat%03d-%03d.lon%03d-%03d.png"%(vname,lllat,urlat, lllon, urlon)
+
+plt.suptitle(stitle)
+plt.savefig(figpath)
+plt.show()
+
+
+#--- draw (line PDF)-------
 fig = plt.figure(figsize=(6,6))
 for i,density in enumerate([True, False]):
     ax  = fig.add_subplot(2,1,i+1)
@@ -145,6 +197,7 @@ for i,density in enumerate([True, False]):
 
     a1his = a2his.mean(axis=0)
     a1nat = a2nat.mean(axis=0)
+
 
     a1hisup = np.percentile(a2his, 95, axis=0)
     a1hislw = np.percentile(a2his, 5, axis=0)
@@ -163,9 +216,9 @@ for i,density in enumerate([True, False]):
     ax.axvline(avenat, linestyle="-", linewidth=1, color="blue")
 
     ax.set_yscale("log")
-    stitle = "Max %s %04d-%04d ens:%03d-%03d"%(vname, iY, eY, lens[0],lens[-1]) + "\nlat:%03d-%03d lon:%03d-%03d"%(lllat,urlat, lllon, urlon)
+    stitle = "LM Lat (%s) %04d-%04d ens:%03d-%03d"%(vname, iY, eY, lens[0],lens[-1]) + "\nlat:%03d-%03d lon:%03d-%03d"%(lllat,urlat, lllon, urlon)
 
-    figpath = figdir + "/pdf.lm.%s.lat%03d-%03d.lon%03d-%03d.png"%(vname,lllat,urlat, lllon, urlon)
+    figpath = figdir + "/pdf.lm-lat.%s.lat%03d-%03d.lon%03d-%03d.png"%(vname,lllat,urlat, lllon, urlon)
 
 plt.suptitle(stitle)
 plt.savefig(figpath)

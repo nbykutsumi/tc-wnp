@@ -1,13 +1,13 @@
 # %%
 import matplotlib
 matplotlib.use('Agg')
-%matplotlib inline
+#%matplotlib inline
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import matplotlib.ticker as mticker
 
 #----------------------------------
-import sys, os, pickle
+import sys, os, pickle, socket
 from   numpy import *
 from   datetime import datetime, timedelta
 from   importlib import import_module
@@ -17,10 +17,10 @@ import calendar
 from bisect import bisect_left
 from collections import deque
 #--------------------------------------
-#calcobj= True
-calcobj= False
-figflag = True
-#figflag = False
+calcobj= True
+#calcobj= False
+#figflag = True
+figflag = False
 
 #iY, eY = 1980,2010
 iY, eY = 1990,2010
@@ -38,12 +38,17 @@ lscen    = ["HPB","HPB_NAT"] # run={expr}-{scen}-{ens}
 #lscen    = ["HPB_NAT"] # run={expr}-{scen}-{ens}
 #lens    = range(1,20+1)
 #lens    = range(21,50+1)
-#lens    = range(1,50+1)
-lens    = range(1,10+1)
+lens    = range(1,50+1)
+#lens    = [2]
 res     = "320x640"
 noleap  = False
 #vname   = "dslp"
-vname   = "wmaxlw"
+#vname   = "wmaxlw"
+vname   = "nextpos"
+#vname   = "nowpos"
+#vname   = "prepos"
+#vname   = "lat"
+#vname   = "lon"
 
 
 detectName = 'wsd_d4pdf_20201209-py38'
@@ -55,8 +60,15 @@ Cyclone     = import_module("%s.Cyclone"%(detectName))  # test
 d4PDF       = import_module("%s.d4PDF"%(detectName))
 IBTrACS     = import_module("%s.IBTrACS"%(detectName))
 
+hostname=socket.gethostname()
+if hostname=="shui":
+    wsbaseDir = '/tank/utsumi/WS/d4PDF_GCM'
+elif hostname=="well":
+    wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
+else:
+    print("check hostname",hostname)
+    sys.exit()
 
-wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
 outbaseDir = '/home/utsumi/temp/bams2020/vect-tc-var'
 util.mk_dir(outbaseDir)
 figdir  = '/home/utsumi/temp/bams2020/fig/pdf-tc-var'
@@ -137,7 +149,7 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
                     lDTime = util.ret_lDTime(iDTime,eDTime,timedelta(hours=6))
 
                     ltclonlat = []
-                    print(('ens=',ens))
+                    #print(scen,Year,Mon)
                     #-------------------
                     wsDir= wsbaseDir + '/%s-%s-%03d'%(expr, scen, ens)
 
@@ -184,91 +196,91 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
                 vectpath = outDir + "/%s.lat%03d-%03d.lon%03d-%03d.%04d.npy"%(vname,lllat,urlat,lllon,urlon,Year)
                 np.save(vectpath, a1var)
                 print(vectpath)
-####*** Draw PDF *************
-for scen in ["HPB","HPB_NAT"]:
-    if figflag !=True: continue
-
-    if vname=="dslp":
-        cmbnd = np.arange(0,25,0.5)
-        cmcnt= (cmbnd[:-1] + cmbnd[1:])*0.5
-    elif vname=="wmaxlw":
-        cmbnd = np.arange(12,100,2)
-        cmcnt= (cmbnd[:-1] + cmbnd[1:])*0.5
-
-
-    a2count = np.zeros([len(lens), len(cmcnt)], int32)
-    a2rfreq = np.zeros([len(lens), len(cmcnt)], float64)
-
-    a1vectall = deque([])
-    for iens, ens in enumerate(lens):
-        outDir = outbaseDir + '/%s/%s/%s-%03d'%(slabel, vname, scen, ens)
-        util.mk_dir(outDir)
-
-        a1vect = np.concatenate([np.load(outDir + "/%s.lat%03d-%03d.lon%03d-%03d.%04d.npy"%(vname,lllat,urlat,lllon,urlon,Year)) for Year in lYear])
-
-        if vname=="dslp":
-            a1vect = a1vect*0.01  # hPa
-        
-        a1vectall.extend(a1vect)
-
-        a1count, _ = np.histogram(a1vect, bins=cmbnd, density=False)
-        a1rfreq, _ = np.histogram(a1vect, bins=cmbnd, density=True)
-
-        a2count[iens] = a1count 
-        a2rfreq[iens] = a1rfreq
-    
-    if scen=="HPB":
-        a2count_his = a2count
-        a2rfreq_his = a2rfreq
-        avehis = np.array(a1vectall).mean()
-
-    elif scen=="HPB_NAT":
-        a2count_nat = a2count
-        a2rfreq_nat = a2rfreq
-        avenat = np.array(a1vectall).mean()
-
-    else:
-        print("check scen",scen)
-        sys.exit()
-#--- draw -------
-fig = plt.figure(figsize=(6,6))
-for i,density in enumerate([True, False]):
-    ax  = fig.add_subplot(2,1,i+1)
-    if density==True:
-        a2his = a2rfreq_his
-        a2nat = a2rfreq_nat
-
-    else:
-        a2his = a2count_his
-        a2nat = a2count_nat
-
-    a1his = a2his.mean(axis=0)
-    a1nat = a2nat.mean(axis=0)
-
-    a1hisup = np.percentile(a2his, 95, axis=0)
-    a1hislw = np.percentile(a2his, 5, axis=0)
-    a1natup = np.percentile(a2nat, 95, axis=0)
-    a1natlw = np.percentile(a2nat, 5, axis=0)
-
-    ax.plot(cmcnt, a1his, "-",linewidth=2,color="red")
-    ax.plot(cmcnt, a1nat, "-",linewidth=2,color="blue")
-
-    ax.plot(cmcnt, a1hisup, "-", linewidth=0.5, color="red")
-    ax.plot(cmcnt, a1hislw, "-", linewidth=0.5, color="red")
-    ax.plot(cmcnt, a1natup, "-", linewidth=0.5, color="blue")
-    ax.plot(cmcnt, a1natlw, "-", linewidth=0.5, color="blue")
-
-    ax.axvline(avehis, linestyle="-", linewidth=1, color="red")
-    ax.axvline(avenat, linestyle="-", linewidth=1, color="blue")
-
-    ax.set_yscale("log")
-    stitle = "%s %04d-%04d ens:%03d-%03d"%(vname, iY, eY, lens[0],lens[-1]) + "\nlat:%03d-%03d lon:%03d-%03d"%(lllat,urlat, lllon, urlon)
-    figpath = figdir + "/pdf.%s.lat%03d-%03d.lon%03d-%03d.png"%(vname,lllat,urlat, lllon, urlon)
-
-plt.suptitle(stitle)
-plt.savefig(figpath)
-plt.show()
-
+#####*** Draw PDF *************
+#for scen in ["HPB","HPB_NAT"]:
+#    if figflag !=True: continue
+#
+#    if vname=="dslp":
+#        cmbnd = np.arange(0,25,0.5)
+#        cmcnt= (cmbnd[:-1] + cmbnd[1:])*0.5
+#    elif vname=="wmaxlw":
+#        cmbnd = np.arange(12,100,2)
+#        cmcnt= (cmbnd[:-1] + cmbnd[1:])*0.5
+#
+#
+#    a2count = np.zeros([len(lens), len(cmcnt)], int32)
+#    a2rfreq = np.zeros([len(lens), len(cmcnt)], float64)
+#
+#    a1vectall = deque([])
+#    for iens, ens in enumerate(lens):
+#        outDir = outbaseDir + '/%s/%s/%s-%03d'%(slabel, vname, scen, ens)
+#        util.mk_dir(outDir)
+#
+#        a1vect = np.concatenate([np.load(outDir + "/%s.lat%03d-%03d.lon%03d-%03d.%04d.npy"%(vname,lllat,urlat,lllon,urlon,Year)) for Year in lYear])
+#
+#        if vname=="dslp":
+#            a1vect = a1vect*0.01  # hPa
+#        
+#        a1vectall.extend(a1vect)
+#
+#        a1count, _ = np.histogram(a1vect, bins=cmbnd, density=False)
+#        a1rfreq, _ = np.histogram(a1vect, bins=cmbnd, density=True)
+#
+#        a2count[iens] = a1count 
+#        a2rfreq[iens] = a1rfreq
+#    
+#    if scen=="HPB":
+#        a2count_his = a2count
+#        a2rfreq_his = a2rfreq
+#        avehis = np.array(a1vectall).mean()
+#
+#    elif scen=="HPB_NAT":
+#        a2count_nat = a2count
+#        a2rfreq_nat = a2rfreq
+#        avenat = np.array(a1vectall).mean()
+#
+#    else:
+#        print("check scen",scen)
+#        sys.exit()
+##--- draw -------
+#fig = plt.figure(figsize=(6,6))
+#for i,density in enumerate([True, False]):
+#    ax  = fig.add_subplot(2,1,i+1)
+#    if density==True:
+#        a2his = a2rfreq_his
+#        a2nat = a2rfreq_nat
+#
+#    else:
+#        a2his = a2count_his
+#        a2nat = a2count_nat
+#
+#    a1his = a2his.mean(axis=0)
+#    a1nat = a2nat.mean(axis=0)
+#
+#    a1hisup = np.percentile(a2his, 95, axis=0)
+#    a1hislw = np.percentile(a2his, 5, axis=0)
+#    a1natup = np.percentile(a2nat, 95, axis=0)
+#    a1natlw = np.percentile(a2nat, 5, axis=0)
+#
+#    ax.plot(cmcnt, a1his, "-",linewidth=2,color="red")
+#    ax.plot(cmcnt, a1nat, "-",linewidth=2,color="blue")
+#
+#    ax.plot(cmcnt, a1hisup, "-", linewidth=0.5, color="red")
+#    ax.plot(cmcnt, a1hislw, "-", linewidth=0.5, color="red")
+#    ax.plot(cmcnt, a1natup, "-", linewidth=0.5, color="blue")
+#    ax.plot(cmcnt, a1natlw, "-", linewidth=0.5, color="blue")
+#
+#    ax.axvline(avehis, linestyle="-", linewidth=1, color="red")
+#    ax.axvline(avenat, linestyle="-", linewidth=1, color="blue")
+#
+#    ax.set_yscale("log")
+#    stitle = "%s %04d-%04d ens:%03d-%03d"%(vname, iY, eY, lens[0],lens[-1]) + "\nlat:%03d-%03d lon:%03d-%03d"%(lllat,urlat, lllon, urlon)
+#    figpath = figdir + "/pdf.%s.lat%03d-%03d.lon%03d-%03d.png"%(vname,lllat,urlat, lllon, urlon)
+#
+#plt.suptitle(stitle)
+#plt.savefig(figpath)
+#plt.show()
+#
 
 
 # %%

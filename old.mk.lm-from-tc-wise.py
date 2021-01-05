@@ -7,7 +7,7 @@
 #import matplotlib.ticker as mticker
 
 #----------------------------------
-import sys, os, shutil, pickle
+import sys, os, shutil, socket
 from   numpy import *
 from   datetime import datetime, timedelta
 from   importlib import import_module
@@ -29,20 +29,51 @@ season ="ALL"
 prj     = "d4PDF"
 model   = "__"
 expr    = 'XX'
-lscen    = ["HPB","HPB_NAT"] # run={expr}-{scen}-{ens}
-#lscen    = ["HPB"] # run={expr}-{scen}-{ens}
+#lscen    = ["HPB","HPB_NAT"] # run={expr}-{scen}-{ens}
+lscen    = ["HPB"] # run={expr}-{scen}-{ens}
 #lscen    = ["HPB_NAT"] # run={expr}-{scen}-{ens}
-lens    = range(1,7+1)
+#lens    = range(1,7+1)
+lens    = [1]
 #lens    = range(21,50+1)
 #lens    = range(1,50+1)
-#vname = "wmaxlw"
-vname = "dslp"
+vname = "wmaxlw"
+#vname = "dslp"
+
+ddtype={
+"dtlw": float32,
+"dtmd": float32,
+"dtup": float32,
+"initland": float32,
+"initsst": float32,
+"lat": float32,
+"lon": float32,
+"slp": float32,
+"slp_mean_adj": float32,
+"slp_mean_box": float32,
+"vortlw": float32,
+"vortlw_max_box": float32,
+"wmaxlw": float32,
+"wmaxup": float32,
+"dura":int32,
+"x": int32,
+"y": int32,
+"tcmask":bool,
+"dslp":float32,
+}
+
 
 detectName = 'wsd_d4pdf_20201209-py38'
 d4PDF       = import_module("%s.d4PDF"%(detectName))
 
+hostname = socket.gethostname()
+if hostname=="shui":
+    wsbaseDir = '/tank/utsumi/WS/d4PDF_GCM'
+elif hostname=="well":
+    wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
+else:
+    print("check hostname",hostname)
+    sys.exit()
 
-wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
 outbasedir = '/home/utsumi/temp/bams2020/tc-wise-WNP'
 #util.mk_dir(outbaseDir)
 figdir  = '/home/utsumi/temp/bams2020/fig/pdf-tc-var'
@@ -85,7 +116,7 @@ for scen in lscen:
             for Mon in lMon:
                 ibasedir = '/home/utsumi/temp/bams2020/tc-wise-WNP'
                 idir = ibasedir + "/%s/%s.%03d/%04d%02d"%(slabel,scen,ens,Year,Mon) 
-                ssearch = idir + "/tcmask.*.npy"
+                ssearch = idir + "/tcmask.*.bn"
                 lmaskpath = sorted(glob.glob(ssearch))
 
                 for maskpath in lmaskpath:
@@ -96,17 +127,17 @@ for scen in lscen:
 
                     cid  = ".".join(fname.split(".")[-3:-1])
 
-                    amask= np.load(maskpath)
-                    alat = np.load(srcdir + "/lat.%s.npy"%(cid))
-                    alon = np.load(srcdir + "/lon.%s.npy"%(cid))
+                    amask= np.fromfile(maskpath, ddtype["tcmask"])
+                    alat = np.fromfile(srcdir + "/lat.%s.bn"%(cid), ddtype["lat"])
+                    alon = np.fromfile(srcdir + "/lon.%s.bn"%(cid), ddtype["lon"])
 
                     if vname=="dslp":
-                        aslp     = np.load(srcdir + "/slp.%s.npy"%(cid))
-                        aslp_adj = np.load(srcdir + "/slp_mean_adj.%s.npy"%(cid))
+                        aslp     = np.fromfile(srcdir + "/slp.%s.bn"%(cid), ddtype["slp"])
+                        aslp_adj = np.fromfile(srcdir + "/slp_mean_adj.%s.bn"%(cid), ddtype["slp"])
                         avar = aslp_adj - aslp
 
                     else:
-                        avar = np.load(srcdir + "/%s.%s.npy"%(vname,cid))
+                        avar = np.fromfile(srcdir + "/%s.%s.bn"%(vname,cid), ddtype[vname])
 
 
                     amasklat= ma.masked_outside(alat, lllat, urlat).mask
@@ -115,8 +146,11 @@ for scen in lscen:
                     amask = amask + amasklat + amasklon
 
                     if (~amask).sum()==0: continue
+                    if amask.sum() == 0:
+                        avartmp = avar
+                    else:
+                        avartmp = ma.masked_where(amask, avar).compressed()
 
-                    avartmp = ma.masked_where(amask, avar).compressed()
                     imax = np.argmax(avartmp)
                     ldat.append(avartmp[imax])
                     llmlat.append(alat[imax])
@@ -128,13 +162,13 @@ for scen in lscen:
             #-- save --
             lmbasedir = '/home/utsumi/temp/bams2020/lm-WNP'
             lmdir = lmbasedir + "/%s/%s.lat%03d-%03d.lon%03d-%03d/%s.%03d/"%(slabel,season,lllat,urlat,lllon,urlon,scen,ens) 
-            lmpath    = lmdir + "/lm.%s.%04d.npy"%(vname,Year)
-            latpath = lmdir + "/lat.%s.%04d.npy"%(vname,Year)
-            lonpath = lmdir + "/lon.%s.%04d.npy"%(vname,Year)
+            lmpath    = lmdir + "/lm.%s.%04d.bn"%(vname,Year)
+            latpath = lmdir + "/lat.%s.%04d.bn"%(vname,Year)
+            lonpath = lmdir + "/lon.%s.%04d.bn"%(vname,Year)
             util.mk_dir(lmdir)
-            np.save(lmpath, ldat)  
-            np.save(latpath, llmlat) 
-            np.save(lonpath, llmlon)
+            ldat.astype(ddtype[vname]).tofile(lmpath)  
+            llmlat.astype(ddtype["lat"]).tofile(latpath) 
+            llmlon.astype(ddtype["lon"]).tofile(lonpath)
             print(lonpath)
 #        #-- histogram ---
 #        if vname=="dslp":
