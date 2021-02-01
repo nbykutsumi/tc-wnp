@@ -1,7 +1,7 @@
 # %%
 import matplotlib
 matplotlib.use('Agg')
-%matplotlib inline
+#%matplotlib inline
 import cartopy.crs as ccrs
 import matplotlib.ticker as mticker
 #----------------------------------
@@ -16,10 +16,8 @@ from bisect import bisect_left
 from detect_fsub import *
 import socket
 #--------------------------------------
-#calcflag = True
-calcflag = False
-#calcave  = True
-calcave  = False
+calcflag = True
+#calcflag = False
 figflag  = True
 #figflag  = False
 iY = 1990
@@ -34,12 +32,15 @@ dgridx = 9  # 9 x 0.5625    ~ 5.06 degree radius
 prj     = "d4PDF"
 model   = "__"
 expr    = 'XX'
-lscen   = ['HPB','HPB_NAT']
+#lscen   = ['HPB','HPB_NAT']
 #lscen   = ['HPB']
-#lscen   = ['HPB_NAT']
+lscen   = ['HPB_NAT']
 lens    = list(range(1,50+1))
-#lens    = list(range(1,35+1))
-
+#lens    = list(range(1,1+1))
+#wday   = 1  # 1, 3
+wday   = 3  # 1, 3
+ldh    = {1:[0,6,12,18], 3:np.arange(-24,42+1,6)}[wday]
+print(len(ldh))
 region = "WNP"
 dBBox = {"WNP":[[0,100],[50,150]]}
 [[lllat,lllon],[urlat,urlon]] = dBBox[region]
@@ -63,7 +64,8 @@ elif hostname=='well':
 
 
 compbasedir= '/home/utsumi/temp/bams2020/composite'
-figdir  = '/home/utsumi/temp/bams2020'
+figdir  = '/home/utsumi/temp/bams2020/fig/map-tc-count-perday'
+util.mk_dir(figdir)
 d4sfc = d4PDF.snp_6hr_2byte(vtype='sfc', dbbaseDir=d4pdfdir)
 #a2land = d4PDF.load_topo_TL319(dbbaseDir=d4pdfdir, vname='ratiol', mipyss_fill=-9999.)
 #----------------------------------
@@ -135,14 +137,11 @@ for scen in lscen:
 
 
         for Year in lYear:
-            a2num = np.zeros([ny,nx], "int32")
-            a2sum = np.zeros([ny,nx], "float64")
-
             ndays = (datetime(Year,12,31,0) - datetime(Year,1,1,0)).days +1
-            #a3tcprec = np.zeros([ndays,nyreg,nxreg],"float64")
-            a3tcprec = np.full([ndays,nyreg,nxreg],miss,"float64")
 
             iday = -1 
+            a3num = np.full([ndays,nyreg,nxreg], miss, "int8")
+
             for Mon in lMon:
                 print(scen,ens,Year,Mon)
                 #-- test --------
@@ -152,101 +151,83 @@ for scen in lscen:
 
                 lDTime = util.ret_lDTime_fromYM([Year,Mon],[Year,Mon], timedelta(hours=24), hour0=0)
 
-                #--- load precipitation ---
-                a3prec_day = d4sfc.load_6hr_mon("PRECIPI", scen, ens, Year, Mon).reshape(-1,4,ny,nx).mean(axis=1)
-
                 #--- load TC dictionary ---
-                YM = [Year,Mon]
-                dexcxy, dtcxy  = cy.mkInstDictC_objTC(YM,YM,varname='vortlw')
+                if wday ==1:
+                    iYM = [Year,Mon]
+                    eYM = [Year,Mon]
+                elif wday==3:
+                    iYM = util.shift_YM(Year,Mon,-1)
+                    eYM = util.shift_YM(Year,Mon,+1)
+
+                try:
+                    dexcxy, dtcxy  = cy.mkInstDictC_objTC(iYM,eYM,varname='vortlw')
+                except:
+                    dexcxy, dtcxy  = cy.mkInstDictC_objTC([Year,Mon],[Year,Mon],varname='vortlw')
 
                 #--------------------------    
-
                 for i,DTime in enumerate(lDTime):
                     iday = iday+1
                     #--------------------------
-                    ltcxy = []
-                    for dh in [0,6,12,18]:
-                        ltcxy = ltcxy + dtcxy[DTime + timedelta(hours=dh)]
 
-                    if len(ltcxy)==0: continue    
+                    a2num = np.zeros([nyreg,nxreg],"int8")
+                    for dh in ldh:
+                        try:
+                            ltcxy = dtcxy[DTime + timedelta(hours=int(dh))]
+                        except KeyError:
+                            continue
 
-                    ltcx, ltcy, ltcvar = list(map(np.array,list(zip(*ltcxy))))
+                        if len(ltcxy)==0: continue    
+    
+                        ltcx, ltcy, ltcvar = list(map(np.array,list(zip(*ltcxy))))
+    
+                        #-- Make mask ---
+                        a2mask = detect_fsub.mk_a2mask_with_table(a2table.T, ltcx, ltcy, nx, ny).T
+                        a2num = a2num + a2mask[y0:y1+1,x0:x1+1].astype("int8")
 
-                    #-- Make mask ---
-                    a2mask = detect_fsub.mk_a2mask_with_table(a2table.T, ltcx, ltcy, nx, ny).T
-                    a2tcprec= a3prec_day[i].filled(0)*a2mask
-
-                    a2num = a2num + a2mask.astype("int32")
-                    a2sum = a2sum + a2tcprec
-                    a3tcprec[iday] = ma.masked_where(a2mask==0, a2tcprec).filled(miss)[y0:y1+1,x0:x1+1]
-
-
-            a2num = a2num
-            a2sum = a2sum
+                    a3num[iday] = a2num
             #--- Save file ---------
             precbasedir = "/home/utsumi/temp/bams2020/tc-prec-%04dkm"%(radkm)
             precdir = precbasedir + "/%s.%03d"%(scen,ens)
             util.mk_dir(precdir)
 
-            numpath = precdir + "/num.%04d.npy"%(Year)
-            sumpath = precdir + "/sum.%04d.npy"%(Year)
-            tcprecpath = precdir + "/prec-tc.%s.%04d.npy"%(region,Year)
-            yxbboxpath = precdir + "/yxbbox.%s.npy"%(region)
-            bboxpath   = precdir + "/bbox.%s.npy"%(region)
+            countpath = precdir + "/timesper-%dday.%04d.npy"%(wday,Year)
 
-            np.save(numpath, a2num.astype("int32"))
-            np.save(sumpath, a2sum.astype("float64"))
-            np.save(tcprecpath, a3tcprec.astype("float64"))
-            np.save(yxbboxpath, np.array([[y0,x0],[y1,x1]], "int32"))
-            np.save(bboxpath, np.array(dBBox[region],"float32"))
+            np.save(countpath, a3num.astype("int8"))
 
-            print(sumpath)
+            print(countpath)
 
-#*** Make average of each ensemble ***
-for scen in lscen:
-    if calcave != True: continue
-    for iens,ens in enumerate(lens):
-        print(scen,ens)
-
-        precbasedir = "/home/utsumi/temp/bams2020/tc-prec-%04dkm"%(radkm)
-
-        ##--- test ----------
-        #a3tmp = np.load(precbasedir + "/%s.%03d/prec-tc.%s.%04d.npy"%(scen,ens,region,2000))
-        #a3tmp = ma.masked_less(a3tmp,0)
-        #a2tmp = a3tmp[243]*60*60*24
-        #plt.imshow(a2tmp, origin="lower")
-        #plt.show()
-        #plt.colorbar()
-        #print(a3tmp.min())
-        #sys.exit()
-        ##--------------------
-        """
-        prec-tc 3D array: Non-TC pixel is filled by missing value (-9999).
-        """
-        a2tmp = ma.masked_less(np.concatenate([np.load(precbasedir + "/%s.%03d/prec-tc.%s.%04d.npy"%(scen,ens,region,Year)) for Year in lYear], axis=0), 0).mean(axis=0).filled(-9999.)
-
-        #a3rat[iens] = a2tmp
-
-        #-- Save ---
-        avedir = precbasedir + "/ens-ave-%04d-%04d"%(iY,eY)
-        util.mk_dir(avedir)
-        avepath= avedir + "/prec-tc-ave.%s.%03d.npy"%(scen,ens)
-        np.save(avepath, a2tmp.astype("float32"))
-        print(avepath)
-        #-----------
 
 ##*** Draw map *************
 for scen in lscen:
     if figflag !=True: continue
 
-    precbasedir = "/home/utsumi/temp/bams2020/tc-prec-%04dkm"%(radkm)
-    avedir = precbasedir + "/ens-ave-%04d-%04d"%(iY,eY)  # this data is created by mk.map.tc-precip.py
+    a3ave = np.full([len(lens),nyreg,nxreg], -9999).astype("float64")
+    for iens,ens in enumerate(lens):
+        precbasedir = "/home/utsumi/temp/bams2020/tc-prec-%04dkm"%(radkm)
+        precdir = precbasedir + "/%s.%03d"%(scen,ens)
 
-    a3rat = np.array([np.load(avedir + "/prec-tc-ave.%s.%03d.npy"%(scen,ens)) for ens in lens])
-    
-    a3rat = ma.masked_less(a3rat, 0)
+        a3pass = np.full([len(lYear),nyreg,nxreg], -9999)
+        a3even = np.full([len(lYear),nyreg,nxreg], -9999)
 
-    a2fig = a3rat.mean(axis=0)*60*60*24 # unit: mm/day
+        for i,Year in enumerate(lYear):
+            print(ens,Year)
+            a3count = ma.masked_equal(np.load(precdir + "/timesper-%dday.%04d.npy"%(wday,Year)), 0)
+
+            a2passTmp = a3count.sum(axis=0)
+            a2evenTmp = a3count.count(axis=0)
+
+            a3pass[i] = a2passTmp
+            a3even[i] = a2evenTmp
+
+        a2pass   = a3pass.sum(axis=0)
+        a2even   = a3even.sum(axis=0)
+        a2aveTmp = (ma.masked_where(a2even==0, a2pass.astype("float64")) / a2even).filled(np.nan)
+
+
+        a3ave[iens] = a2aveTmp
+
+    a2fig = ma.masked_invalid(a3ave).mean(axis=0)
+
 
 
     [[lllat,lllon],[urlat,urlon]] = dBBox[region]
@@ -283,7 +264,7 @@ for scen in lscen:
     mycm = matplotlib.colors.ListedColormap(mycm, name='myColorMap', N=mycm.shape[0])
 
     #-- color boundaries norm ------
-    cmbnd = list(np.arange(0,36+1,2))
+    cmbnd = list(np.arange(0,3+0.01,0.1))
     #cmlabels = list(np.arange(0,50+1,10))
 
     cmap   = plt.cm.get_cmap(mycm, len(cmbnd)+1)  # define the colormap
@@ -299,8 +280,8 @@ for scen in lscen:
     plt.colorbar(im)
 
     #-- title, figure name -----
-    figpath = figdir + '/map.prec-tc.%s.%04d-%04d.png'%(scen,iY,eY)
-    stitle = 'TC precipitation mm/day %s\n'%(scen) + '%04d-%04d ens:%03d-%03d'%(iY,eY,lens[0],lens[-1])
+    figpath = figdir + '/map.count-per%dday.%s.%04d-%04d.png'%(wday,scen,iY,eY)
+    stitle = 'average count/%dday %s\n'%(wday,scen) + '%04d-%04d ens:%03d-%03d'%(iY,eY,lens[0],lens[-1])
 
     axmap.set_title(stitle)
 

@@ -18,8 +18,6 @@ import calendar
 from bisect import bisect_left
 #import Cyclone
 #--------------------------------------
-#calcflag = True
-calcflag = False
 figflag  = True
 radkm = 500 # km
 region= "WNP"
@@ -32,10 +30,11 @@ model   = "__"
 expr    = 'XX'
 #lens    = range(1,20+1)
 lens    = range(1,50+1)
+#lens    = range(1,35+1)
 #lens    = range(1,5+1)
 #lens    = range(3,9+1)
 
-figdir  = '/home/utsumi/temp/bams2020/fig/map-prec'
+figdir  = '/home/utsumi/temp/bams2020/fig/temp'
 util.mk_dir(figdir)
 #----------------------------------
 detectName = 'wsd_d4pdf_20201209-py38'
@@ -88,7 +87,7 @@ tcrvortout = tcrvort*1.0e+5
 slabel = 'sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-wind-%02d-wdif-%d-du-%02d'%(thsst*10, exrvortout, tcrvortout, thwcore, thwind, thwdif, thdura)
 
 #***********************
-# Figure: ensemble mean
+# Figure: based on mean of each ensemble
 #***********************
 if figflag != True: sys.exit()
 
@@ -112,8 +111,8 @@ a2hatch = ma.masked_where(a2pv>0.05, a2fig)
 #a2hatch = ma.masked_where(a2fig<0., a2fig)
 
 #-- title, figure name -----
-stitle = 'dif tc-prec. (HIST - NAT) mm/day\n' + '%04d-%04d ens:%03d-%03d'%(iY,eY,lens[0],lens[-1]) 
-figpath = figdir + '/map.dif.tc-prec.obj.%04d-%04d.png'%(iY,eY)
+stitle = '[Org]dif tc-prec. (HIST - NAT) mm/day\n' + '%04d-%04d ens:%03d-%03d'%(iY,eY,lens[0],lens[-1]) 
+figpath = figdir + '/map.dif.tc-prec.obj.ORG.%04d-%04d.png'%(iY,eY)
 #---------------------------
 figmap   = plt.figure(figsize=(6,4))
 axmap    = figmap.add_axes([0.1, 0.1, 0.8, 0.8], projection=ccrs.PlateCarree())
@@ -132,8 +131,8 @@ axmap.set_extent([lllon,urlon,lllat,urlat])
 axmap.coastlines(color="k")
 
 #-- color boundaries norm --------
-cmbnd = list(np.arange(-3,3+0.1,0.5))
-cmlabels = list(np.arange(-3,3+0.1, 0.5))
+cmbnd = list(np.arange(-5,5+0.1,1))
+cmlabels = list(np.arange(-5,5+0.1, 1))
 mycm = 'RdBu_r'
 
 cmap   = plt.cm.get_cmap(mycm, len(cmbnd)+1)  # define the colormap
@@ -162,6 +161,98 @@ axmap.set_title(stitle)
 plt.savefig(figpath)
 plt.show()
 print(figpath)
+
+
+
+##*****************************************************
+## Figure: based on sum/num
+##*****************************************************
+#if figflag != True: sys.exit()
+#
+#for scen in ["HPB","HPB_NAT"]:
+#
+#    a3rat = np.full([len(lens),nyreg,nxreg], -9999., float64)
+#    for iens,ens in enumerate(lens):
+#        print(scen,ens)
+#        precbasedir = "/home/utsumi/temp/bams2020/tc-prec-%04dkm"%(radkm)
+#        avedir = precbasedir + "/%s.%03d"%(scen,ens)  # this data is created by mk.map.tc-precip.py
+#    
+#        a3sumtmp = np.array([np.load(avedir + "/sum.%03d.npy"%(Year))[y0:y1+1,x0:x1+1] for Year in lYear])
+#        a3numtmp = np.array([np.load(avedir + "/num.%03d.npy"%(Year))[y0:y1+1,x0:x1+1] for Year in lYear])
+#        a2sum = ma.masked_less(a3sumtmp,0).sum(axis=0)
+#        a2num = ma.masked_less(a3numtmp,0).sum(axis=0)
+#    
+#        a2rat = (ma.masked_where(a2num==0, a2sum) / a2num)
+#        a2rat = a2rat.filled(-9999.)
+#        a3rat[iens] = a2rat
+#    
+#    if scen =="HPB":
+#        a3rat_his = ma.masked_less(a3rat, 0)
+#    elif scen=="HPB_NAT":
+#        a3rat_nat = ma.masked_less(a3rat, 0)
+#
+#a2dif = (a3rat_his.mean(axis=0) - a3rat_nat.mean(axis=0))*60*60*24   # mm/day
+#
+#a2tv, a2pv = scipy.stats.ttest_ind(a3rat_his.filled(np.nan), a3rat_nat.filled(np.nan), axis=0, equal_var=False, nan_policy="omit")
+#
+#a2fig = a2dif
+#a2hatch = ma.masked_where(a2pv>0.05, a2fig)
+##a2hatch = ma.masked_where(a2fig<0., a2fig)
+#
+##-- title, figure name -----
+#stitle = '[S/N]dif tc-prec. (HIST - NAT) mm/day\n' + '%04d-%04d ens:%03d-%03d'%(iY,eY,lens[0],lens[-1]) 
+#figpath = figdir + '/map.dif.tc-prec.obj.SN.%04d-%04d.png'%(iY,eY)
+##---------------------------
+#figmap   = plt.figure(figsize=(6,4))
+#axmap    = figmap.add_axes([0.1, 0.1, 0.8, 0.8], projection=ccrs.PlateCarree())
+#
+##-- grid lines ---
+#gl       = axmap.gridlines(crs=ccrs.PlateCarree(), draw_labels=False, linewidth=1, linestyle=":", color="k", alpha=0.8)
+#xticks   = np.arange(-180, 180+1, 15)
+#yticks   = np.arange(-90,90, 15)
+#gl.xlocator = mticker.FixedLocator(xticks)
+#gl.ylocator = mticker.FixedLocator(yticks)
+#axmap.set_xticks(xticks, crs = ccrs.PlateCarree())
+#axmap.set_yticks(yticks, crs = ccrs.PlateCarree())
+#
+##-- set extent and coastlines----
+#axmap.set_extent([lllon,urlon,lllat,urlat])
+#axmap.coastlines(color="k")
+#
+##-- color boundaries norm --------
+#cmbnd = list(np.arange(-3,3+0.1,0.5))
+#cmlabels = list(np.arange(-3,3+0.1, 0.5))
+#mycm = 'RdBu_r'
+#
+#cmap   = plt.cm.get_cmap(mycm, len(cmbnd)+1)  # define the colormap
+#cmaplist = [cmap(i) for i in range(cmap.N)]
+#cmap = matplotlib.colors.ListedColormap(cmaplist)
+#norm = matplotlib.colors.BoundaryNorm(cmbnd, ncolors=cmap.N, clip=False)
+#
+##-- contourf --------------
+#X,Y = np.meshgrid(a1loncnt[x0:x1+1],a1latcnt[y0:y1+1])
+##vmin, vmax = cmbnd[0], cmbnd[-1]
+#im  = plt.contourf(X,Y,a2fig, cmap=cmap, norm=norm, levels=cmbnd, extend="both")
+#print(cmbnd)
+##-- hatch --------------
+##a2hatch = ma.masked_inside(a2hatch, -1, 1) # should be adjusted considering 
+#plt.contourf(X, Y, a2hatch, hatches=["///"], alpha=0.)
+#
+##-- draw colorbar ------
+#cax = figmap.add_axes([0.82,0.2,0.05,0.6])
+#cbar= plt.colorbar(im, orientation='vertical', cax=cax)
+#cbar.set_ticks(cmlabels)
+#cbar.set_ticklabels(cmlabels)
+#
+##-- Tiele -----
+#axmap.set_title(stitle)
+##-- Save ------
+#plt.savefig(figpath)
+#plt.show()
+#print(figpath)
+#
+
+#
 
 
 # %%

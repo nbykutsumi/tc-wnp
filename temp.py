@@ -1,25 +1,19 @@
 # %%
 import matplotlib.pyplot as plt
-#%matplotlib inline
-
+%matplotlib inline
 import numpy as np
-from math import sin, cos, acos
-import myfunc.util as util
-from myfunc.util import  calc_dist_gc
-import os, sys
-from detect_fsub import *
+from numpy import *
+import d4PDF
+from bisect import bisect_left
+import sys
 
-ny,nx = 320, 640
-a1xpy = np.array([200, 200,250])
-a1ypy = np.array([20,  100,150])
-a2table = np.load("./tab.dydx4mask.d4PDF.nrady-008.0500km.npy")
-
-a2out = detect_fsub.mk_a2mask_with_table(a2table.T, a1xpy, a1ypy, nx, ny).T
-
-plt.imshow(a2out, origin="lower")
-plt.show()
-print(a2out.shape)
-print(a2out)
-print(a2out.max())
-
+srcpath = "/home/utsumi/temp/bams2020/tc-prec-0500km/HPB.001/timesper-1day.1990.npy"
+a3num=np.load(srcpath)
+for i in range(a3num.shape[0]):
+    a2num = a3num[i]
+    if a2num.max()==4:
+        plt.imshow(a2num,origin="lower")
+        plt.colorbar()
+        plt.show()
+        sys.exit()
 # %%

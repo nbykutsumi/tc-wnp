@@ -76,7 +76,8 @@ nx   = 640
 ny   = 320
 dlat = 0.5615674
 dlon = 0.5625
-thradkm= 500.
+#thradkm= 500.
+thradkm= 200.
 #dlat = (a1lat[1:]-a1lat[:-1]).mean()
 
 #print(calc_dist_gc(0,10,0,100))

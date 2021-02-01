@@ -8,13 +8,13 @@ import matplotlib.ticker as mticker
 
 #----------------------------------
 import sys, os, pickle
-#from   mpl_toolkits.basemap import Basemap
 from   numpy import *
 from   datetime import datetime, timedelta
 from   importlib import import_module
 import numpy as np
-import util
+import myfunc.util as util
 import calendar
+import socket
 #import Cyclone
 #--------------------------------------
 #calcbst= True
@@ -33,8 +33,8 @@ figmean = True
 ctype = 'TC'
 #ctype = 'ALL'
 
-#iY, eY = 1980,2010
-iY, eY = 1990,2010
+iY, eY = 1980,2010
+#iY, eY = 1990,2010
 #iY, eY = 2001,2010
 lYear = range(iY,eY+1)
 lMon  = range(1,12+1)
@@ -44,6 +44,7 @@ lYM = util.ret_lYM([iY,1],[eY,12])
 #cmbnd = np.arange(0,50,4)
 #cmbnd = [0,1,5] + range(10,50,5)
 #cmbnd = np.array(cmbnd)
+#cmbnd = np.arange(0,50,4)
 cmbnd = np.arange(0,50,4)
 print(cmbnd)
 #cmbnd = None
@@ -53,9 +54,9 @@ model   = "__"
 expr    = 'XX'
 scen    = 'HPB' # run={expr}-{scen}-{ens}
 #scen    = 'HPB_NAT' # run={expr}-{scen}-{ens}
-#lens    = range(1,20+1)
+lens    = range(1,20+1)
 #lens    = range(21,50+1)
-lens    = range(1,50+1)
+#lens    = range(1,50+1)
 #lens    = [20]
 #lens    = range(3,9+1)
 res     = "320x640"
@@ -92,7 +93,8 @@ nx = len(a1lonbnd) - 1
 lonbnd0 = a1lonbnd[0]
 latbnd0 = a1latbnd[0]
 #[[lllat,lllon],[urlat,urlon]] = [[0,100],[45,180]]
-[[lllat,lllon],[urlat,urlon]] = [[0,100],[50,180]]
+#[[lllat,lllon],[urlat,urlon]] = [[0,100],[50,180]]
+[[lllat,lllon],[urlat,urlon]] = [[10,105],[45,150]]
 a1latbndfig = np.arange(lllat, urlat+0.01, dgrid)
 a1lonbndfig = np.arange(lllon, urlon+0.01, dgrid)
 #nyfig = a1latbnd.shape[0] -1
@@ -112,13 +114,15 @@ def draw_map(a2dat, dpara):
     axmap.set_extent([lllon,urlon,lllat,urlat])
     axmap.coastlines(color="k")
 
-    #-- Make new colormap (white at the lower end) --
-    upper = matplotlib.cm.jet(np.arange(256))
-    lower = np.ones((int(256/4),4))
-    for i in range(3):
-      lower[:,i] = np.linspace(1, upper[0,i], lower.shape[0])
-    mycm = np.vstack(( lower, upper ))
-    mycm = matplotlib.colors.ListedColormap(mycm, name='myColorMap', N=mycm.shape[0])
+    ##-- Make new colormap (white at the lower end) --
+    #upper = matplotlib.cm.jet(np.arange(256))
+    #lower = np.ones((int(256/4),4))
+    #for i in range(3):
+    #  lower[:,i] = np.linspace(1, upper[0,i], lower.shape[0])
+    #mycm = np.vstack(( lower, upper ))
+    #mycm = matplotlib.colors.ListedColormap(mycm, name='myColorMap', N=mycm.shape[0])
+
+    mycm = "gist_stern_r"
 
     #-- color boundaries norm --------
     #mycm = 'gist_stern_r'
@@ -177,6 +181,7 @@ def draw_map(a2dat, dpara):
 #iYbst,eYbst = 2000, 2010
 #iYbst,eYbst = 1980, 2018
 iYbst,eYbst = 1980, 2010
+#iYbst,eYbst = 1990, 2010
 #iYbst,eYbst = 2018,2018
 
 

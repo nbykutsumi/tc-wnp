@@ -47,7 +47,8 @@ nx = len(a1lonbnd) - 1
 lonbnd0 = a1lonbnd[0]
 latbnd0 = a1latbnd[0]
 #[[lllat,lllon],[urlat,urlon]] = [[0,100],[45,180]]
-[[lllat,lllon],[urlat,urlon]] = [[0,100],[50,180]]
+#[[lllat,lllon],[urlat,urlon]] = [[0,100],[50,180]]
+[[lllat,lllon],[urlat,urlon]] = [[10,105],[45,150]]
 
 #**************************
 

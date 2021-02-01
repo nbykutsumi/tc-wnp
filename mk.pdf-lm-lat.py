@@ -182,48 +182,48 @@ plt.suptitle(stitle)
 plt.savefig(figpath)
 plt.show()
 
-
-#--- draw (line PDF)-------
-fig = plt.figure(figsize=(6,6))
-for i,density in enumerate([True, False]):
-    ax  = fig.add_subplot(2,1,i+1)
-    if density==True:
-        a2his = a2rfreq_his
-        a2nat = a2rfreq_nat
-
-    else:
-        a2his = a2count_his
-        a2nat = a2count_nat
-
-    a1his = a2his.mean(axis=0)
-    a1nat = a2nat.mean(axis=0)
-
-
-    a1hisup = np.percentile(a2his, 95, axis=0)
-    a1hislw = np.percentile(a2his, 5, axis=0)
-    a1natup = np.percentile(a2nat, 95, axis=0)
-    a1natlw = np.percentile(a2nat, 5, axis=0)
-
-    ax.plot(acnt, a1his, "-",linewidth=2,color="red")
-    ax.plot(acnt, a1nat, "-",linewidth=2,color="blue")
-
-    ax.plot(acnt, a1hisup, "-", linewidth=0.5, color="red")
-    ax.plot(acnt, a1hislw, "-", linewidth=0.5, color="red")
-    ax.plot(acnt, a1natup, "-", linewidth=0.5, color="blue")
-    ax.plot(acnt, a1natlw, "-", linewidth=0.5, color="blue")
-
-    ax.axvline(avehis, linestyle="-", linewidth=1, color="red")
-    ax.axvline(avenat, linestyle="-", linewidth=1, color="blue")
-
-    ax.set_yscale("log")
-    stitle = "LM Lat (%s) %04d-%04d ens:%03d-%03d"%(vname, iY, eY, lens[0],lens[-1]) + "\nlat:%03d-%03d lon:%03d-%03d"%(lllat,urlat, lllon, urlon)
-
-    figpath = figdir + "/pdf.lm-lat.%s.lat%03d-%03d.lon%03d-%03d.png"%(vname,lllat,urlat, lllon, urlon)
-
-plt.suptitle(stitle)
-plt.savefig(figpath)
-plt.show()
-
-
+#
+##--- draw (line PDF)-------
+#fig = plt.figure(figsize=(6,6))
+#for i,density in enumerate([True, False]):
+#    ax  = fig.add_subplot(2,1,i+1)
+#    if density==True:
+#        a2his = a2rfreq_his
+#        a2nat = a2rfreq_nat
+#
+#    else:
+#        a2his = a2count_his
+#        a2nat = a2count_nat
+#
+#    a1his = a2his.mean(axis=0)
+#    a1nat = a2nat.mean(axis=0)
+#
+#
+#    a1hisup = np.percentile(a2his, 95, axis=0)
+#    a1hislw = np.percentile(a2his, 5, axis=0)
+#    a1natup = np.percentile(a2nat, 95, axis=0)
+#    a1natlw = np.percentile(a2nat, 5, axis=0)
+#
+#    ax.plot(acnt, a1his, "-",linewidth=2,color="red")
+#    ax.plot(acnt, a1nat, "-",linewidth=2,color="blue")
+#
+#    ax.plot(acnt, a1hisup, "-", linewidth=0.5, color="red")
+#    ax.plot(acnt, a1hislw, "-", linewidth=0.5, color="red")
+#    ax.plot(acnt, a1natup, "-", linewidth=0.5, color="blue")
+#    ax.plot(acnt, a1natlw, "-", linewidth=0.5, color="blue")
+#
+#    ax.axvline(avehis, linestyle="-", linewidth=1, color="red")
+#    ax.axvline(avenat, linestyle="-", linewidth=1, color="blue")
+#
+#    ax.set_yscale("log")
+#    stitle = "LM Lat (%s) %04d-%04d ens:%03d-%03d"%(vname, iY, eY, lens[0],lens[-1]) + "\nlat:%03d-%03d lon:%03d-%03d"%(lllat,urlat, lllon, urlon)
+#
+#    figpath = figdir + "/pdf.lm-lat.%s.lat%03d-%03d.lon%03d-%03d.png"%(vname,lllat,urlat, lllon, urlon)
+#
+#plt.suptitle(stitle)
+#plt.savefig(figpath)
+#plt.show()
+#
+#
 
 # %%

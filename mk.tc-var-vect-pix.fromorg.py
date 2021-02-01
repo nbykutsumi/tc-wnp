@@ -35,23 +35,15 @@ lYM = util.ret_lYM([iY,1],[eY,12])
 prj     = "d4PDF"
 model   = "__"
 expr    = 'XX'
-lscen    = ["HPB","HPB_NAT"] # run={expr}-{scen}-{ens}
+#lscen    = ["HPB","HPB_NAT"] # run={expr}-{scen}-{ens}
 #lscen    = ["HPB"] # run={expr}-{scen}-{ens}
-#lscen    = ["HPB_NAT"] # run={expr}-{scen}-{ens}
-#lens    = range(1,20+1)
+lscen    = ["HPB_NAT"] # run={expr}-{scen}-{ens}
+#lens    = range(1,1+1)
 #lens    = range(36,50+1)
-#lens    = range(1,50+1)
-lens    = range(16,50+1)
+lens    = range(1,50+1)
+#lens    = range(16,50+1)
 #lens    = range(2,15+1)
 res     = "320x640"
-noleap  = False
-#vname   = "dslp"
-#vname   = "wmaxlw"
-#vname   = "nextpos"
-#vname   = "nowpos"
-#vname   = "prepos"
-#vname   = "lat"
-#vname   = "lon"
 vname = "prc0500"  # calc from map
 
 detectName = 'wsd_d4pdf_20201209-py38'
@@ -148,7 +140,12 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
             for Year in lYear:
                 if calcobj is not True: continue
 
-                a1var = deque([])
+                ax = deque()
+                ay = deque()
+                awmax  = deque()
+                adslp  = deque()
+                aprc   = deque()
+
                 for Mon in lMon:
 
                     eday   = calendar.monthrange(Year,Mon)[1]
@@ -157,96 +154,79 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
                     lDTime = util.ret_lDTime(iDTime,eDTime,timedelta(hours=6))
 
                     ltclonlat = []
-                    #print(scen,Year,Mon)
+                    print(scen,ens,Year,Mon)
                     #-------------------
                     wsDir= wsbaseDir + '/%s-%s-%03d'%(expr, scen, ens)
 
                     cy  = Cyclone.Cyclone(baseDir=wsDir, const=const)
-                    if vname=="dslp":
-                        dexcxy, dtcxy_slp = cy.mkInstDictC_objTC([Year,Mon],[Year,Mon],varname="slp")
-                        dexcxy, dtcxy_ave = cy.mkInstDictC_objTC([Year,Mon],[Year,Mon],varname="slp_mean_adj")
 
-                        ltcxy = []
-                        for ltmp in list(dtcxy_slp.values()):
-                            ltcxy = ltcxy + ltmp
+                    #-- dslp ---
+                    _, dtcxy_slp = cy.mkInstDictC_objTC([Year,Mon],[Year,Mon],varname="slp")
+                    _, dtcxy_slpave = cy.mkInstDictC_objTC([Year,Mon],[Year,Mon],varname="slp_mean_adj")
 
-                        lvar2= []
-                        for ltmp in list(dtcxy_ave.values()):
-                            lvar2 = lvar2 + ltmp
+                    #-- wmaxlw --
+                    _, dtcxy_wmax = cy.mkInstDictC_objTC([Year,Mon],[Year,Mon],varname="wmaxlw")
 
-                        atcxy = np.array(ltcxy)
-                        avar2 = np.array(lvar2)
-                        atcxy[:,2] = avar2[:,2] - atcxy[:,2]
+                    #-- precip --
+                    a2table = np.load("./tab.dydx4mask.d4PDF.nrady-008.0500km.npy")
+                    d4sfc = d4PDF.snp_6hr_2byte(vtype='sfc', dbbaseDir=d4pdfdir)                      
+                    a3prec_day = d4sfc.load_6hr_mon("PRECIPI", scen, ens, Year, Mon).reshape(-1,4,nyin,nxin).mean(axis=1)
 
-                    elif vname=="prc0500":  # calc from map
-                        a2table = np.load("./tab.dydx4mask.d4PDF.nrady-008.0500km.npy")
-                        _, dtcxy = cy.mkInstDictC_objTC([Year,Mon],[Year,Mon],varname="slp")
+                    ldtime = dtcxy_wmax.keys()
 
-                        d4sfc = d4PDF.snp_6hr_2byte(vtype='sfc', dbbaseDir=d4pdfdir)                      
-                        a3prec_day = d4sfc.load_6hr_mon("PRECIPI", scen, ens, Year, Mon).reshape(-1,4,nyin,nxin).mean(axis=1)
+                    for dtime in ldtime:
+                        doy = (dtime - datetime(Year,Mon,1)).days  # 0, 1, 2, ...
+                        lxywmax = dtcxy_wmax[dtime]
+                        if len(lxywmax)==0: continue
 
-                        ldtime = dtcxy.keys()
+                        lwmax   = np.array(lxywmax)[:,2]
+                        lslp    = np.array(dtcxy_slp[dtime])[:,2]
+                        lslpave = np.array(dtcxy_slpave[dtime])[:,2]
+                        if len(lwmax)==0: continue
 
-                        atcxy = []
-                        for dtime in ldtime:
-                            doy = (dtime - datetime(Year,Mon,1)).days  # 0, 1, 2, ...
-                            lxyval = dtcxy[dtime]
-                            if len(lxyval)==0: continue
+                        for i,(x,y,_) in enumerate(lxywmax):
 
-                            for (x,y,_) in lxyval:
+                            #print(dtime,x,y)
+                            if (x<x0)or(x>x1)or(y<y0)or(y>y1): continue
 
-                                #print(dtime,x,y)
-                                if (x<x0)or(x>x1)or(y<y0)or(y>y1): continue
+                            a2mask = detect_fsub.mk_a2mask_with_table(a2table.T, [x], [y], nxin, nyin).T
 
-                                ltcx=[x]
-                                ltcy=[y]
-                                a2mask = detect_fsub.mk_a2mask_with_table(a2table.T, ltcx, ltcy, nxin, nyin).T
+                            aprcTmp = ma.masked_where(a2mask==0, a3prec_day[doy]).compressed()
+                            nrec  = len(aprcTmp)
+                            axTmp = np.full(nrec, x)
+                            ayTmp = np.full(nrec, y)
+                            awmaxTmp = np.full(nrec, lwmax[i])
+                            adslpTmp = np.full(nrec, lslp[i]-lslpave[i])
 
+                            ax.extend(axTmp)
+                            ay.extend(ayTmp)
+                            awmax.extend(awmaxTmp)
+                            adslp.extend(adslpTmp)
+                            aprc.extend(aprcTmp)
 
-                                #plt.imshow(a2mask[y0:y1+1,x0:x1+1], origin="lower")
-                                #plt.colorbar()
-                                #plt.show()
+                if len(ax)==0: continue
+                ax = np.array(ax).astype("int16")
+                ay = np.array(ay).astype("int16")
+                awmax = (np.array(awmax)*100).astype("int16")  # scaled by 100
+                adslp = np.array(adslp).astype("int16")
+                aprc  = (np.array(aprc)*60*60*24).astype("int16")   # mm/day
 
-                                #plt.imshow(a3prec_day[doy][y0:y1+1,x0:x1+1], origin="lower")
-                                #plt.colorbar()
-                                #plt.show()
-
-                                #sys.exit()
-
-                                prec = ma.masked_where(a2mask==0, a3prec_day[doy]).mean() 
-                                atcxy.append([x,y,prec])
-
-                        if len(atcxy)==0: continue
-                        atcxy = np.array(atcxy)
-
-                    else:
-                        dexcxy, dtcxy = cy.mkInstDictC_objTC([Year,Mon],[Year,Mon],varname=vname)
-
-                        ltcxy = []
-                        for ltmp in list(dtcxy.values()):
-                            ltcxy = ltcxy + ltmp
-                        atcxy = np.array(ltcxy)
-
-                    a1x = atcxy[:,0].astype("int32")
-                    a1y = atcxy[:,1].astype("int32")              
-                    a1v = atcxy[:,2]
-
-
-                    a1xmask = ma.masked_outside(a1x, x0, x1).mask
-                    a1ymask = ma.masked_outside(a1y, y0, y1).mask
-                    a1mask = a1xmask + a1ymask
-                    print(scen,ens,Year,Mon,len(a1v))
-
-                    a1vTmp = ma.masked_where(a1mask, a1v).compressed()
-                    a1var.extend(a1vTmp)
-
-                a1var = np.array(a1var)
                 #-- save annual data -----
-                outDir = outbaseDir + '/%s/%s/%s-%03d'%(slabel, vname, scen, ens)
+                outDir = outbaseDir + '/%s/tc-vect-500km-pix/%s-%03d'%(slabel, scen, ens)
                 util.mk_dir(outDir)
-                vectpath = outDir + "/%s.lat%03d-%03d.lon%03d-%03d.%04d.npy"%(vname,lllat,urlat,lllon,urlon,Year)
-                np.save(vectpath, a1var)
-                print(vectpath)
+                xpath = outDir + "/x.lat%03d-%03d.lon%03d-%03d.%04d.npy"%(lllat,urlat,lllon,urlon,Year)
+                ypath = outDir + "/y.lat%03d-%03d.lon%03d-%03d.%04d.npy"%(lllat,urlat,lllon,urlon,Year)
+                wmaxpath = outDir + "/wmaxlw.lat%03d-%03d.lon%03d-%03d.%04d.npy"%(lllat,urlat,lllon,urlon,Year)
+                dslppath = outDir + "/dslp.lat%03d-%03d.lon%03d-%03d.%04d.npy"%(lllat,urlat,lllon,urlon,Year)
+                prcpath = outDir + "/prc.lat%03d-%03d.lon%03d-%03d.%04d.npy"%(lllat,urlat,lllon,urlon,Year)
+
+                np.save(xpath, ax)
+                np.save(ypath, ay)
+                np.save(wmaxpath, awmax)
+                np.save(dslppath, adslp)
+                np.save(prcpath, aprc)
+
+                print(prcpath)
 #####*** Draw PDF *************
 #for scen in ["HPB","HPB_NAT"]:
 #    if figflag !=True: continue
