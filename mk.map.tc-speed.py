@@ -205,7 +205,7 @@ for scen in lscen:
     a2avex= ma.masked_where(a2num==0, a2sumx) / a2num
     a2avey= ma.masked_where(a2num==0, a2sumy) / a2num
 
-    #** Drawa ****************
+    #** Draw (km/hr)****************
     a2fig = a2ave
     a1lat = o1latcnt
     a1lon = o1loncnt
@@ -253,8 +253,8 @@ for scen in lscen:
     im = axmap.contourf(X,Y, a2fig, levels=cmbnd, cmap=mycm, extend="max")
     plt.colorbar(im)
 
-    #-- vector ------------
-    axmap.quiver(X, Y, a2avex, a2avey, angles="xy", units="xy", scale=5, color="white", width=0.4)
+    ##-- vector ------------
+    #axmap.quiver(X, Y, a2avex, a2avey, angles="xy", units="xy", scale=5, color="white", width=0.4)
 
     #-- title, figure name -----
     figpath = figdir + '/map.speed.%s.%04d-%04d.png'%(scen,iY,eY)
@@ -266,6 +266,71 @@ for scen in lscen:
 
     plt.savefig(figpath)
     print(figpath)
+
+
+    #** Draw (% increase)****************
+    a2fig = a2ave
+    a1lat = o1latcnt
+    a1lon = o1loncnt
+    X,Y = np.meshgrid(a1lon, a1lat)
+    BBox = [[0,100],[50,150]]
+    [[lllat,lllon],[urlat,urlon]] = BBox
+
+    fig = plt.figure(figsize=(6,4))
+    axmap  = fig.add_axes([0.1,0.1,0.8,0.8], projection=ccrs.PlateCarree())
+    axmap.coastlines()
+
+    gl = axmap.gridlines(crs=ccrs.PlateCarree(), draw_labels=False, linewidth=1, linestyle=":", color="k", alpha=0.8)
+    xticks = np.arange(-180,180+1,15)
+    yticks = np.arange(-90,90+1,15)
+    gl.xlocator = mticker.FixedLocator(xticks)
+    gl.ylocator = mticker.FixedLocator(yticks)
+    axmap.set_xticks(xticks, crs = ccrs.PlateCarree())
+    axmap.set_yticks(yticks, crs = ccrs.PlateCarree())
+
+    axmap.set_extent([lllon,urlon,lllat,urlat])
+
+    #-- Make new colormap (white at the lower end) --
+    upper = matplotlib.cm.jet(np.arange(256))
+    #lower = np.ones((int(256/4),4))
+    lower = np.ones((int(256/8),4))
+    for i in range(3):
+        lower[:,i] = np.linspace(1, upper[0,i], lower.shape[0])
+    mycm = np.vstack(( lower, upper ))
+    mycm = matplotlib.colors.ListedColormap(mycm, name='myColorMap', N=mycm.shape[0])
+
+    #-- color boundaries norm ------
+    cmbnd = list(np.arange(0,40+1,2))
+    #cmlabels = list(np.arange(0,50+1,10))
+
+    cmap   = plt.cm.get_cmap(mycm, len(cmbnd)+1)  # define the colormap
+    cmaplist = [cmap(i) for i in range(cmap.N)]
+    cmap = matplotlib.colors.ListedColormap(cmaplist)
+    norm = matplotlib.colors.BoundaryNorm(cmbnd, ncolors=cmap.N, clip=False)
+    #--extent and coast lines ------
+    #axmap.set_extent([lllon,urlon,lllat,urlat])
+    axmap.set_extent([105,150,10,45])
+    axmap.coastlines()
+
+    #--contourf ----------
+    im = axmap.contourf(X,Y, a2fig, levels=cmbnd, cmap=mycm, extend="max")
+    plt.colorbar(im)
+
+    ##-- vector ------------
+    #axmap.quiver(X, Y, a2avex, a2avey, angles="xy", units="xy", scale=5, color="white", width=0.4)
+
+    #-- title, figure name -----
+    figpath = figdir + '/map.speed.%s.%04d-%04d.png'%(scen,iY,eY)
+    stitle = 'TC speed km/h %s\n'%(scen) + '%04d-%04d ens:%03d-%03d'%(iY,eY,lens[0],lens[-1])
+
+    axmap.set_title(stitle)
+
+    plt.show()
+
+    plt.savefig(figpath)
+    print(figpath)
+
+
 
 
 # %%

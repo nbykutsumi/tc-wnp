@@ -26,8 +26,8 @@ lMon  = range(1,12+1)
 lYM = util.ret_lYM([iY,1],[eY,12])
 
 #-----------------
-#calcflag = True
-calcflag = False
+calcflag = True
+#calcflag = False
 
 prj     = "d4PDF"
 model   = "__"
@@ -37,13 +37,12 @@ lscen    = ["HPB","HPB_NAT"] # run={expr}-{scen}-{ens}
 #lscen    = ["HPB_NAT"] # run={expr}-{scen}-{ens}
 #lens    = range(1,5+1)
 lens    = range(1,50+1)
-#xname   = "dslp"
-xname   = "wmaxlw"
+xname   = "dslp"
+#xname   = "wmaxlw"
 yname   = "prc"
 radkm   = 500
 
-#lpercent=[0,50,90,99,99.9,100]
-lrp =[0,1,10]
+lpercent=[0,50,90,99,99.9,100]
 
 [[lllat,lllon],[urlat,urlon]] = [[0,100],[50,180]]   # for loading tc-vector data
 
@@ -111,11 +110,10 @@ for scen in ["HPB_NAT","HPB"]:
 
     d1int = {}
     d1prc = {}
-    d1now = {}
     for isub, rname in enumerate(lrname): 
         d1int[rname] = deque([])
         d1prc[rname] = deque([])
-        d1now[rname] = deque([])
+
 
     for iens, ens in enumerate(lens):
         print("load",scen,ens)
@@ -141,11 +139,9 @@ for scen in ["HPB_NAT","HPB"]:
             a1flag = d2mask[rname].flatten()[a1now]
             a1xvecttmp = ma.masked_where(a1flag !=1, a1xvect).compressed()
             a1yvecttmp = ma.masked_where(a1flag !=1, a1yvect).compressed()
-            a1nowtmp   = ma.masked_where(a1flag !=1, a1now).compressed()
 
             d1int[rname].extend(a1xvecttmp)
             d1prc[rname].extend(a1yvecttmp)
-            d1now[rname].extend(a1nowtmp)
 
     #--- save ---
     for rname in lrname:
@@ -153,14 +149,11 @@ for scen in ["HPB_NAT","HPB"]:
         util.mk_dir(datdir)
         intpath = datdir + "/%s.%s.%s.%03d-%03d.npy"%(xname,scen,rname,lens[0],lens[-1]) 
         prcpath = datdir + "/%s.%s.%s.%03d-%03d.npy"%(yname,scen,rname,lens[0],lens[-1]) 
-        nowpath = datdir + "/%s.%s.%s.%03d-%03d.npy"%("now",scen,rname,lens[0],lens[-1]) 
 
         d1int[rname] = np.array(d1int[rname])
         d1prc[rname] = np.array(d1prc[rname])
-        d1now[rname] = np.array(d1now[rname])
         np.save(intpath, d1int[rname])
         np.save(prcpath, d1prc[rname])
-        np.save(nowpath, d1now[rname])
         print(intpath)
 
 #-- histogram --
@@ -178,78 +171,40 @@ for rname in lrname:
         datdir = "/home/utsumi/temp/bams2020/decomp-%dkm-pix"%(radkm)
         intpath = datdir + "/%s.%s.%s.%03d-%03d.npy"%(xname,scen,rname,lens[0],lens[-1]) 
         prcpath = datdir + "/%s.%s.%s.%03d-%03d.npy"%(yname,scen,rname,lens[0],lens[-1]) 
-        nowpath = datdir + "/%s.%s.%s.%03d-%03d.npy"%("now",scen,rname,lens[0],lens[-1]) 
 
         if scen=="HPB":
             a1int_his = np.load(intpath)
             a1prc_his = np.load(prcpath)
-            a1now_his = np.load(nowpath)
         elif scen=="HPB_NAT":
             a1int_nat = np.load(intpath)
             a1prc_nat = np.load(prcpath)
-            a1now_nat = np.load(nowpath)
         else:
             print("check scen",scen)
             sys.exit()
 
-
+    a1ptile = []
+    for percent in lpercent[1:-1]:
+        a1ptile.append(np.percentile(a1prc_nat, percent))
+    a1ptile = [0] + a1ptile + [1e+5]
 
     a1numint_his,_   = np.histogram(a1int_his, bins=abnd)
     a1numint_nat,_   = np.histogram(a1int_nat, bins=abnd)
 
-    a2numext_his = np.full([len(lrp),len(abnd)-1], -9999)
-    a2numext_nat = np.full([len(lrp),len(abnd)-1], -9999)
-    for irp,rp in enumerate(lrp):
-        #-- Load extreme criteria (NAT) ---
-        if rp ==0:
-            a2th = np.zeros([nyin,nxin],float32)
+    a2numprc_his,_,_ = np.histogram2d(a1prc_his,a1int_his,bins=[a1ptile, abnd])
+    a2numprc_nat,_,_ = np.histogram2d(a1prc_nat,a1int_nat,bins=[a1ptile, abnd])
 
-        else:
-            [[lllatext,lllonext],[urlatext,urlonext]] =[[0,100],[50,150]]
-            
-            yext0 = bisect_left(a1latin, lllatext)
-            yext1 = bisect_left(a1latin, urlatext)
-            xext0 = bisect_left(a1lonin, lllonext)
-            xext1 = bisect_left(a1lonin, urlonext)
+    a2prbprc_his = (ma.masked_where(np.broadcast_to(a1numint_his, a2numprc_his.shape)==0, a2numprc_his) / a1numint_his).filled(0)
+    a2prbprc_nat = (ma.masked_where(np.broadcast_to(a1numint_nat, a2numprc_nat.shape)==0, a2numprc_nat) / a1numint_nat).filled(0)
 
-            thdir = "/home/utsumi/temp/bams2020/extreme-prec-d/HPB_NAT.1990-2010"
-            thpath= thdir + "/prec.rp-%03d.WNP.npy"%(rp)
-            a2thTmp = np.load(thpath) *60*60*24    # mm/day 
-
-            a2th = np.full([nyin,nxin],-9999).astype(float32)
-            a2th[yext0:yext1+1, xext0:xext1+1] = a2thTmp
-
-
-        a1th_his = a2th.flatten()[a1now_his]
-        a1th_nat = a2th.flatten()[a1now_nat]
-
-        a1mask_his = ma.masked_less(a1prc_his, a1th_his).mask
-        a1mask_nat = ma.masked_less(a1prc_nat, a1th_nat).mask
-
-        a1int_his_tmp = ma.masked_where(a1mask_his, a1int_his).compressed()
-        a1int_nat_tmp = ma.masked_where(a1mask_nat, a1int_nat).compressed()
-        a1prc_his_tmp = ma.masked_where(a1mask_his, a1prc_his).compressed()
-        a1prc_nat_tmp = ma.masked_where(a1mask_nat, a1prc_nat).compressed()
-
-        a1numext_his,_,_ = scipy.stats.binned_statistic(a1int_his_tmp, a1prc_his_tmp, statistic="count", bins=abnd)
-        a1numext_nat,_,_ = scipy.stats.binned_statistic(a1int_nat_tmp, a1prc_nat_tmp, statistic="count", bins=abnd)
-
-        a2numext_his[irp] = a1numext_his
-        a2numext_nat[irp] = a1numext_nat
-
-        print(rp)
-        print(rp,a1numint_his.sum(), a1numext_his.sum(),a1numint_nat.sum(),a1numext_nat.sum())
-
-    a2prbext_his = (ma.masked_where(np.broadcast_to(a1numint_his, a2numext_his.shape)==0, a2numext_his) / a1numint_his).filled(0)
-    a2prbext_nat = (ma.masked_where(np.broadcast_to(a1numint_nat, a2numext_nat.shape)==0, a2numext_nat) / a1numint_nat).filled(0)
-
-    print(a2prbext_his[0])
-    print(a2prbext_nat[0])
+    print(a1int_his.shape, a1prc_his.shape)
+    print(a2numprc_his.sum(), a1numint_his.sum())
+    #print(a2prbprc_his.sum(axis=0))
+    #print(a2prbprc_nat.sum(axis=0))
     #--
-    a2dN = (a1numint_his - a1numint_nat)*a2prbext_nat
-    a2dT = (a2prbext_his - a2prbext_nat)*a1numint_nat
-    a2dNdT = (a1numint_his - a1numint_nat)*(a2prbext_his - a2prbext_nat)
-    a2dnum = a2numext_his - a2numext_nat
+    a2dN = (a1numint_his - a1numint_nat)*a2prbprc_nat
+    a2dT = (a2prbprc_his - a2prbprc_nat)*a1numint_nat
+    a2dNdT = (a1numint_his - a1numint_nat)*(a2prbprc_his - a2prbprc_nat)
+    a2dnum = a2numprc_his - a2numprc_nat
     a2sum  = a2dN + a2dT + a2dNdT
 
     a1dN   = a2dN.sum(axis=1)
@@ -257,7 +212,7 @@ for rname in lrname:
     a1dNdT = a2dNdT.sum(axis=1)
     a1dnum = a2dnum.sum(axis=1)
 
-    lout  = [["rp"] + lrp, ["dnum"]+a1dnum.tolist(),  ["dN"]+a1dN.tolist(), ["dT"]+a1dT.tolist(), ["dNdT"]+a1dNdT.tolist() ]
+    lout  = [ ["dnum"]+a1dnum.tolist(),  ["dN"]+a1dN.tolist(), ["dT"]+a1dT.tolist(), ["dNdT"]+a1dNdT.tolist() ]
     sout  = util.list2csv(lout)
 
     csvpath = datdir + "/decomp.%s.%s.csv"%(xname,rname)
@@ -265,13 +220,13 @@ for rname in lrname:
     print(csvpath)
 
     #-- write a2numprc ---
-    hispath = datdir + "/a2numext.%s.%s.%s.csv"%(xname,"HPB",rname)
-    natpath = datdir + "/a2numext.%s.%s.%s.csv"%(xname,"HPB_NAT",rname)
+    hispath = datdir + "/a2numprc.%s.%s.%s.csv"%(xname,"HPB",rname)
+    natpath = datdir + "/a2numprc.%s.%s.%s.csv"%(xname,"HPB_NAT",rname)
 
-    sout = util.array2csv(a2numext_his)
+    sout = util.array2csv(a2numprc_his)
     f=open(hispath, "w"); f.write( sout); f.close()
 
-    sout = util.array2csv(a2numext_nat)
+    sout = util.array2csv(a2numprc_nat)
     f=open(natpath, "w"); f.write( sout); f.close()
 
     print(hispath)

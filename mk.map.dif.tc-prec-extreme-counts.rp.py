@@ -143,16 +143,21 @@ cmaplist = [cmap(i) for i in range(cmap.N)]
 cmap = matplotlib.colors.ListedColormap(cmaplist)
 norm = matplotlib.colors.BoundaryNorm(cmbnd, ncolors=cmap.N, clip=False)
 
-#-- contourf --------------
-X,Y = np.meshgrid(a1loncnt[x0:x1+1],a1latcnt[y0:y1+1])
-#vmin, vmax = cmbnd[0], cmbnd[-1]
-im  = plt.contourf(X,Y,a2fig, cmap=cmap, norm=norm, levels=cmbnd, extend="both")
+##-- contourf --------------
+#X,Y = np.meshgrid(a1loncnt[x0:x1+1],a1latcnt[y0:y1+1])
+##vmin, vmax = cmbnd[0], cmbnd[-1]
+#im  = plt.contourf(X,Y,a2fig, cmap=cmap, norm=norm, levels=cmbnd, extend="both")
+
+X,Y = np.meshgrid(a1lonbnd[x0:x1+1],a1latbnd[y0:y1+1])
+vmin, vmax = cmbnd[0], cmbnd[-1]
+im  = plt.pcolormesh(X,Y,a2fig, cmap=cmap, norm=norm, vmin=vmin, vmax=vmax)
 print(cmbnd)
 #-- hatch --------------
-plt.contourf(X, Y, a2hatch, hatches=["////"], alpha=0.)
+#plt.contourf(X, Y, a2hatch, hatches=["////"], alpha=0.)
+plt.pcolor(X, Y, a2hatch, hatch="///", alpha=0.)
 
 #-- draw colorbar ------
-cax = figmap.add_axes([0.82,0.2,0.05,0.6])
+cax = figmap.add_axes([0.84,0.2,0.02,0.6])
 cbar= plt.colorbar(im, orientation='vertical', cax=cax)
 #cbar.set_ticks(cbar.ax.get_yticks())
 cbar.set_ticks(cmlabels)

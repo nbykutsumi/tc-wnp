@@ -52,8 +52,8 @@ print(cmbnd)
 prj     = "d4PDF"
 model   = "__"
 expr    = 'XX'
-scen    = 'HPB' # run={expr}-{scen}-{ens}
-#scen    = 'HPB_NAT' # run={expr}-{scen}-{ens}
+#scen    = 'HPB' # run={expr}-{scen}-{ens}
+scen    = 'HPB_NAT' # run={expr}-{scen}-{ens}
 lens    = range(1,20+1)
 #lens    = range(21,50+1)
 #lens    = range(1,50+1)
@@ -246,7 +246,7 @@ if figbst is True:
     a2fig = a2count.astype('float32') / nstep
     a2fig = ma.masked_less(a2fig,0)*4*365  # times/year
     dpara = {}
-    dpara['title'] = 'count/10-year (Best track) %04d-%04d'%(iYbst,eYbst)
+    dpara['title'] = 'count/year (Best track) %04d-%04d'%(iYbst,eYbst)
     dpara['figpath'] = figdir + '/map.freq.tc.bst.%04d-%04d.png'%(iYbst,eYbst)
     dpara['cmbnd']   = cmbnd
     dpara['extend']  = "max"
@@ -414,7 +414,7 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
             a2fig = ma.masked_less(a2fig,0)*4*365  # times/10-year
     
             dpara = {}
-            dpara['title'] = 'count/10-year (d4PDF)' + '%04d-%04d'%(iY,eY) + '\n' + '%s-%s sst:%d ex:%.2f tc:%.2f \n wc:%.1f wind:%d wdif:%d ens:%03d'%(expr, scen, thsst*10, exrvortout, tcrvortout, thwcore, thwind, thwdif, ens)
+            dpara['title'] = 'count/year (d4PDF)' + '%04d-%04d'%(iY,eY) + '\n' + '%s-%s sst:%d ex:%.2f tc:%.2f \n wc:%.1f wind:%d wdif:%d ens:%03d'%(expr, scen, thsst*10, exrvortout, tcrvortout, thwcore, thwind, thwdif, ens)
             #dpara['figpath'] = figdir + '/map.freq.tc.obj.png'
             dpara['figpath'] = figdir + '/map.freq.tc.obj.%s.%04d-%04d.en-%03d.png'%(slabel, iY, eY, ens)
             dpara['cmbnd'] = cmbnd
@@ -431,7 +431,7 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
             for Year in lYear:
                 print(ens,Year) 
                 outDir = outbaseDir + '/%s/%s-%03d'%(slabel, scen, ens)
-                print(outDir + '/a2count.tc.obj.%04d.npy'%(Year))
+                #print(outDir + '/a2count.tc.obj.%04d.npy'%(Year))
                 a2countTmp = np.load(outDir + '/a2count.tc.obj.%04d.npy'%(Year))
                 nstepTmp   = np.load(outDir + '/nstep.tc.obj.%04d.npy'%(Year))
     
@@ -442,7 +442,7 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
         a2fig = ma.masked_less(a2fig,0)*4*365  # times/10-year
     
         dpara = {}
-        dpara['title'] = 'Prob. of existence (d4PDF) %04d-%04d'%(iY, eY) + '\n' + '%s-%s sst:%d ex:%.2f tc:%.2f \n wc:%.1f wind:%d wdif:%d ens-mean'%(expr, scen, thsst*10, exrvortout, tcrvortout, thwcore, thwind, thwdif)
+        dpara['title'] = 'Prob. of existence (d4PDF) [count/year] %04d-%04d'%(iY, eY) + '\n' + '%s-%s sst:%d ex:%.2f tc:%.2f \n wc:%.1f wind:%d wdif:%d ens-mean'%(expr, scen, thsst*10, exrvortout, tcrvortout, thwcore, thwind, thwdif)
         dpara['figpath'] = figdir + '/map.freq.tc.obj.%s.%04d-%04d.ave.png'%(slabel, iY, eY)
         dpara['cmbnd'] = cmbnd
         dpara['extend']= "max"

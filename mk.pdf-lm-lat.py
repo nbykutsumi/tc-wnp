@@ -33,8 +33,8 @@ lscen    = ["HPB","HPB_NAT"] # run={expr}-{scen}-{ens}
 #lscen    = ["HPB"] # run={expr}-{scen}-{ens}
 #lscen    = ["HPB_NAT"] # run={expr}-{scen}-{ens}
 lens    = range(1,50+1)
-vname = "wmaxlw"
-#vname = "dslp"
+#vname = "wmaxlw"
+vname = "dslp"
 
 ddtype={
 "dtlw": float32,
