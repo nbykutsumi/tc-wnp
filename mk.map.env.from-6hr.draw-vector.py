@@ -12,13 +12,14 @@ from   importlib import import_module
 import numpy as np
 import matplotlib.pyplot as plt
 import myfunc.util as util
+import myfunc.grids as grids
 from bisect import bisect_left
 from detect_fsub import *
 import socket
 import scipy.stats
 #--------------------------------------
-#figflag = False
-figflag = True
+figflag = False
+#figflag = True
 difflag = True
 iY = 1990
 eY = 2010
@@ -89,13 +90,27 @@ x1 = bisect_left(a1lonbnd, urlon)
 """
 a1lat1 = a1latcnt
 a1lat2 = a1latcnt
-a1lon1 = np.full(len(a1lat1), a1loncnt[0])
-a1lon2 = np.full(len(a1lat1), a1loncnt[1])
-a1dist = util.calc_dist_gc_array(a1lat1,a1lat2,a1lon1,a1lon2)
+a1lon1 = np.full(len(a1lat1), a1loncnt[1])
+a1lon2 = np.full(len(a1lat1), a1loncnt[3])
 
+a1distx = util.calc_dist_gc_array(a1lat1,a1lat2,a1lon1,a1lon2)
+a2distx = np.ones([ny,nx],"float32")*a1distx.reshape(ny,1)
 
+disty = util.calc_dist_gc(a1lat1[1], a1lat1[3], 0, 0)
+a2disty = np.ones([ny,nx],"float32")*disty
 
+a2distx = a2distx[y0:y1+1,x0:x1+1]
+a2disty = a2disty[y0:y1+1,x0:x1+1]
+#************************************
+# Function for relative vorticity
+#************************************
+def calc_vorticity(a2u, a2v, a2distx, a2disty):
+    u1 = grids.shift_map_global(a2u, dy=0, dx=-1, miss=np.nan)
+    u2 = grids.shift_map_global(a2u, dy=0, dx=+1, miss=np.nan)
+    v1 = grids.shift_map_global(a2v, dy=-1, dx=0, miss=np.nan)
+    v2 = grids.shift_map_global(a2v, dy=+1, dx=0, miss=np.nan)
 
+    return ((v2-v1)/a2distx - (u2-u1)/a2disty)/1000.
 
 
 #----------------------------------
@@ -166,6 +181,10 @@ for vname in lvname:
         uvar = "usteer"
         vvar = "vsteer"
 
+    elif vname=="wind850":
+        uvar = "U850"
+        vvar = "V850"
+
     a2hisx= np.array([np.load( outbasedir + "/%s.%03d"%("HPB",ens) + "/%s.%04d.%s.npy"%(uvar,Year,season))[y0:y1+1,x0:x1+1] for Year in lYear for ens in lens]).mean(axis=0)
     a2hisy = np.array([np.load( outbasedir + "/%s.%03d"%("HPB",ens) + "/%s.%04d.%s.npy"%(vvar,Year,season))[y0:y1+1,x0:x1+1] for Year in lYear for ens in lens]).mean(axis=0)
 
@@ -193,12 +212,22 @@ for vname in lvname:
     axmap.coastlines()
     
     #-- speed differnce contour ------------
-    if vname in ["steer"]:
-        a2difspeed = np.sqrt(a2hisx**2+a2hisy**2) - np.sqrt(a2natx**2+a2naty**2) 
+    if vname in ["wind850","steer"]:
+        if vname =="steer":
+            a2var = np.sqrt(a2hisx**2+a2hisy**2) - np.sqrt(a2natx**2+a2naty**2) 
 
-        #cmbnd = list(np.arange(-40,-5+0.01,5)) + [-2,2] + list(np.arange(5,40+0.01,5))
-        cmbnd = list(np.arange(-1.1,1.1+0.01,0.2))
-        cmlabels = list(map(float, ["%.1f"%x for x in cmbnd]))
+            cmbnd = list(np.arange(-1.1,1.1+0.01,0.2))
+            cmlabels = list(map(float, ["%.1e"%x for x in cmbnd]))
+
+
+        elif vname =="wind850":
+            a2var = calc_vorticity(a2varx, a2vary, a2distx, a2disty)
+
+            cmbnd = list(np.arange(-30,30+0.01,4)*1e-7)
+            cmlabels = list(map(float, ["%.1e"%x for x in cmbnd]))
+            #cmlabels = cmbnd
+
+
         mycm = 'RdBu_r'
 
         cmap   = plt.cm.get_cmap(mycm, len(cmbnd)+1)  # define the colormap
@@ -207,12 +236,14 @@ for vname in lvname:
         norm = matplotlib.colors.BoundaryNorm(cmbnd, ncolors=cmap.N, clip=False)
 
         Xbnd, Ybnd = np.meshgrid(a1lonbnd[x0:x1+2], a1latbnd[y0:y1+2])
-        im  = plt.pcolormesh(Xbnd,Ybnd,a2difspeed, cmap=cmap, norm=norm)
+        im  = plt.pcolormesh(Xbnd,Ybnd,a2var, cmap=cmap, norm=norm)
         #-- draw colorbar ------
         cax = fig.add_axes([0.85,0.1,0.03,0.8])
         cbar= plt.colorbar(im, orientation='vertical', cax=cax)
         cbar.set_ticks(cmlabels)
         cbar.set_ticklabels(cmlabels)
+    
+
 
     #-- vector ------------
     if vname=="steer":
@@ -226,7 +257,7 @@ for vname in lvname:
     axmap.quiverkey(q, 0.75, 0.95, 1, "1 m/s", labelpos="E", coordinates="figure")
 
 
-    #-- title, figure name -----
+    #-- title, fgure name -----
     figpath = figdir + '/map.dif.%s.%04d-%04d.png'%(vname,iY,eY)
     stitle = 'dif %s\n'%(vname) + '%04d-%04d ens:%03d-%03d'%(iY,eY,lens[0],lens[-1])
     

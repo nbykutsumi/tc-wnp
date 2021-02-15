@@ -19,8 +19,8 @@ import scipy.stats
 #--------------------------------------
 calcflag = True
 #calcflag = False
-figflag  = True
-#figflag  = False
+#figflag  = True
+figflag  = False
 difflag  = True
 iY = 1990
 eY = 2010
@@ -40,12 +40,14 @@ lscen   = ['HPB','HPB_NAT']
 #lens    = list(range(1,3+1))
 #lens    = list(range(1,50+1))
 lens    = list(range(2,50+1))
+#lens    = list(range(9,50+1))
 #lens    = list(range(1,5+1))
 #lens    = list(range(5,50+1))
 
 #lvname = ["shear"]
 #lvname = ["usteer","vsteer"]
-lvname = ["U850","V850"]
+#lvname = ["U850","V850"]
+lvname = ["V850"]
 
 region = "WNP"
 #dBBox = {"WNP" :[[10,100],[50,250]]}

@@ -1,7 +1,7 @@
 # %%
 import matplotlib
 matplotlib.use('Agg')
-#%matplotlib inline
+%matplotlib inline
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import matplotlib.ticker as mticker
@@ -18,10 +18,10 @@ import socket
 import glob
 from bisect import bisect_left
 #--------------------------------------
-calcobj= True
-#calcobj= False
-#figobj = True
-figobj = False
+#calcobj= True
+calcobj= False
+figobj = True
+#figobj = False
 
 figmean = True
 #figmean = False
@@ -132,20 +132,11 @@ def draw_map(a2dat, dpara):
     cax = figmap.add_axes([0.82,0.2,0.05,0.6])
     cbar= plt.colorbar(im, orientation='vertical', cax=cax)
 
-    if cmbnd is not None:
-        extend = dpara['extend']
-        cbar.set_ticks(cbar.ax.get_yticks())
-        if extend=='both':
-            cbar.set_ticklabels([""] + list(cbar.ax.get_yticklabels())[1:-1] + [""])
+    cmlabels = dpara['cmlabels']
+    if cmlabels is not None:
+        cbar.set_ticks(cmlabels)
+        cbar.set_ticklabels(cmlabels)
 
-        if extend=='min':
-            cbar.set_ticklabels([""] + list(cbar.ax.get_yticklabels())[1:])
-
-        if extend=='max':
-            cbar.set_ticklabels(list(cbar.ax.get_yticklabels())[:-1]+ [""])
-
-        else:
-            pass
     #-- coastline ---------------
 
     #-- Tiele -----
@@ -238,8 +229,9 @@ for scen in lscen:
     a2dat = a3num.mean(axis=0)
     print(a2dat.sum())
     dpara = {}
-    dpara["cmbnd"] = np.arange(0,5+0.01,0.5)
-    dpara["extend"]= "max"
+    dpara["cmbnd"] = [0,0.1,0.5,1,1.5,2,2.5,3,3.5,4]
+    dpara["cmlabels"] = [0,0.1,0.5,1,1.5,2,2.5,3,3.5,4]
+    dpara["extend"]= ""
     dpara["title"] = "TC genesis [#/year] %s"%(scen)
     dpara["figpath"]= figdir + "/map.genesis.%s.png"%(scen)
     draw_map(a2dat, dpara)

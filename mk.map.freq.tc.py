@@ -1,7 +1,7 @@
 # %%
 import matplotlib
 matplotlib.use('Agg')
-%matplotlib inline
+#%matplotlib inline
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import matplotlib.ticker as mticker
@@ -15,11 +15,12 @@ import numpy as np
 import myfunc.util as util
 import calendar
 import socket
+import IBTrACS
 #import Cyclone
 #--------------------------------------
-#calcbst= True
-calcbst= False
-figbst = True
+calcbst= True
+#calcbst= False
+#figbst = True
 #figbst = False
 
 #calcobj= True
@@ -27,8 +28,8 @@ calcobj= False
 #figobj = True
 figobj = False
 
-figmean = True
-#figmean = False
+#figmean = True
+figmean = False
 
 ctype = 'TC'
 #ctype = 'ALL'
@@ -70,7 +71,7 @@ detectName = 'wsd_d4pdf_20201209-py38'
 ConstCyclone= import_module("%s.ConstCyclone"%(detectName))
 Cyclone     = import_module("%s.Cyclone"%(detectName))  # test
 d4PDF       = import_module("%s.d4PDF"%(detectName))
-IBTrACS     = import_module("%s.IBTrACS"%(detectName))
+#IBTrACS     = import_module("%s.IBTrACS"%(detectName))
 
 
 wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
@@ -180,9 +181,11 @@ def draw_map(a2dat, dpara):
 #---------------------------
 #iYbst,eYbst = 2000, 2010
 #iYbst,eYbst = 1980, 2018
-iYbst,eYbst = 1980, 2010
+#iYbst,eYbst = 1980, 2010
 #iYbst,eYbst = 1990, 2010
-#iYbst,eYbst = 2018,2018
+iYbst,eYbst = 1950,1959
+#iYbst,eYbst = 1960,2010
+#iYbst,eYbst = 2011,2016
 
 
 lYMbst = util.ret_lYM([iYbst,1],[eYbst,12])
@@ -210,10 +213,10 @@ for (Year,Mon) in lYMbst:
         if (ix<0)or(ix>nx-1)or(iy<0)or(iy>ny-1): continue
         a2count[iy,ix] = a2count[iy,ix] + 1
 
-    a2freq = a2count.astype('float32')/len(lDTimeBst)
+    #a2freq = a2count.astype('float32')/len(lDTimeBst)
 
     dbst['a2count'] = a2count
-    dbst['a2freq' ] = a2freq
+    #dbst['a2freq' ] = a2freq
     dbst['iDTime']= iDTimeBst
     dbst['eDTime']= eDTimeBst
     dbst['nstep' ]= len(lDTimeBst)
@@ -229,7 +232,7 @@ for (Year,Mon) in lYMbst:
         bstPath= bstdir + '/%s.tc.bst.%04d.%02d.npy'%(vname,Year,Mon)
         np.save(bstPath, dbst[vname] ) 
         print(bstPath)
-
+        print(a2count.max())
 #-- Figure (best track)
 if figbst is True:
     a2count = np.zeros([ny,nx], 'int32')

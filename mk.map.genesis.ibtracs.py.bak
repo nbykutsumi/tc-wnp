@@ -1,0 +1,37 @@
+# %%
+import matplotlib
+#%matplotlib inline
+from numpy import *
+import numpy as np
+import matplotlib.pyplot as plt
+import IBTrACS
+import myfunc.util as util
+from datetime import datetime, timedelta
+import os, sys
+#-------------------------------
+iYear = 1980
+eYear = 1980
+lYear = range(iYear,eYear+1)
+ib = IBTrACS.IBTrACS()
+
+for Year in lYear:
+    idtime = datetime(Year,1,1,0)
+    edtime = datetime(Year,12,31,18)
+    dtc = ib.ret_dlonlat(idtime,edtime, dhours=6, lvaridx=[0])
+    ldtime= dtc.keys()
+    ltc = dtc.values()
+    
+    ltc = zip(ldtime, ltc)
+    ltc = sorted(ltc, key=lambda x:x[0]) # sort by datetime
+    ltc = zip(*ltc)[1]  # take only values
+    ltc = [x for l in ltc for x in l]
+    
+    a1lon, a1lat, a1tcid = map(np.array, zip(*ltc))
+    ddat = {}
+    for (lon,lat,tcid) in zip(a1lon, a1lat, a1tcid):
+        if tcid not in ddat.keys():
+            ddat[tcid] = [[lon,lat]]
+  
+ 
+    ldat=ddat.values()
+    print(len(ldat))
