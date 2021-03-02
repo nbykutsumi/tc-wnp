@@ -8,7 +8,6 @@ import matplotlib.ticker as mticker
 import scipy.stats
 #----------------------------------
 import sys, os, pickle
-#from   mpl_toolkits.basemap import Basemap
 from   numpy import *
 from   datetime import datetime, timedelta
 from   importlib import import_module
@@ -19,7 +18,8 @@ import socket
 import APHRODITE
 #--------------------------------------
 lys = [
-    [[1951,1970],[1996,2015]]
+    [[1960,1987],[1988,2015]]
+    #[[1980,1997],[1998,2015]]
 ]
 #-----------------
 figdir  = '/home/utsumi/temp/bams2020/fig/map-prec'

@@ -34,7 +34,8 @@ class v1101(object):
                         "ME": np.arange( 20, 65 +0.001, 0.5),
                         "RU": np.arange( 15, 165+0.001, 0.5),
                        }
-
+            dLat = 0.5
+            dLon = 0.5
 
         elif res=="025":
             dnynx = {"MA":[280,360],
@@ -57,6 +58,8 @@ class v1101(object):
                         "ME": np.arange( 20, 65 +0.001, 0.25),
                         "RU": np.arange( 15, 165+0.001, 0.25),
                        }
+            dLat = 0.25
+            dLon = 0.25
 
         else:
             print("check res",res)
@@ -68,6 +71,8 @@ class v1101(object):
         self.Lon = d1lon[region]
         self.LatBnd = d1latbnd[region]
         self.LonBnd = d1lonbnd[region]
+        self.dLat= dLat
+        self.dLon= dLon
  
     def load_year(self, Year=None):
         res    = self.res

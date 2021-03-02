@@ -8,7 +8,7 @@ import matplotlib.ticker as mticker
 import scipy.stats
 #----------------------------------
 import sys, os, pickle
-#from   mpl_toolkits.basemap import Basemap
+from   mpl_toolkits.basemap import Basemap
 from   numpy import *
 from   datetime import datetime, timedelta
 from   importlib import import_module
@@ -16,7 +16,16 @@ import numpy as np
 import myfunc.util as util
 import calendar
 #--------------------------------------
-lYear0 = range(1961,1987+1)
+#lYear0 = range(1960,1987+1)
+#lYear1 = range(1988,2015+1)
+
+lYear0 = range(1980,1997+1)
+lYear1 = range(1998,2015+1)
+
+#lYear0 = range(1980,1998+1)
+#lYear1 = range(1999,2017+1)
+
+#lYear0 = range(1961,1987+1)
 #lYear1 = range(1988,2010+1)
 
 #lYear0 = range(1971,1990+1)
@@ -25,8 +34,6 @@ lYear0 = range(1961,1987+1)
 #lYear1 = range(1991,2010+1)
 #lYear0 = range(1961,1985+1)
 #lYear1 = range(1991,2015+1)
-#lYear0 = range(1980,1997+1)
-#lYear1 = range(1998,2015+1)
 #lYear0 = range(1961,1985+1)
 #lYear1 = range(1986,2010+1)
 #lYear0 = range(1951,1970+1)

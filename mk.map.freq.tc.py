@@ -183,9 +183,9 @@ def draw_map(a2dat, dpara):
 #iYbst,eYbst = 1980, 2018
 #iYbst,eYbst = 1980, 2010
 #iYbst,eYbst = 1990, 2010
-iYbst,eYbst = 1950,1959
+#iYbst,eYbst = 1950,1959
 #iYbst,eYbst = 1960,2010
-#iYbst,eYbst = 2011,2016
+iYbst,eYbst = 2017,2017
 
 
 lYMbst = util.ret_lYM([iYbst,1],[eYbst,12])
