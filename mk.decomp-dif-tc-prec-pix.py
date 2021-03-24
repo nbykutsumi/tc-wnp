@@ -43,7 +43,8 @@ yname   = "prc"
 radkm   = 500
 
 #lpercent=[0,50,90,99,99.9,100]
-lrp =[0,1,10]
+#lrp =[0,1,10]
+lrp =[0,1,5,10]
 
 [[lllat,lllon],[urlat,urlon]] = [[0,100],[50,180]]   # for loading tc-vector data
 
@@ -252,12 +253,14 @@ for rname in lrname:
     a2dnum = a2numext_his - a2numext_nat
     a2sum  = a2dN + a2dT + a2dNdT
 
+    a1numext_nat = a2numext_nat.sum(axis=1)
+    a1numext_his = a2numext_his.sum(axis=1)
     a1dN   = a2dN.sum(axis=1)
     a1dT   = a2dT.sum(axis=1)
     a1dNdT = a2dNdT.sum(axis=1)
     a1dnum = a2dnum.sum(axis=1)
 
-    lout  = [["rp"] + lrp, ["dnum"]+a1dnum.tolist(),  ["dN"]+a1dN.tolist(), ["dT"]+a1dT.tolist(), ["dNdT"]+a1dNdT.tolist() ]
+    lout  = [["rp"] + lrp, ["num_nat"]+a1numext_nat.tolist(), ["num_his"]+a1numext_his.tolist(), ["dnum"]+a1dnum.tolist(),  ["dN"]+a1dN.tolist(), ["dT"]+a1dT.tolist(), ["dNdT"]+a1dNdT.tolist() ]
     sout  = util.list2csv(lout)
 
     csvpath = datdir + "/decomp.%s.%s.csv"%(xname,rname)

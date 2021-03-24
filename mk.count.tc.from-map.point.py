@@ -1,10 +1,9 @@
 # %%
 import matplotlib
 matplotlib.use('Agg')
-#%matplotlib inline
+%matplotlib inline
 #----------------------------------
 import sys, os
-from   mpl_toolkits.basemap import Basemap
 from   numpy import *
 from   datetime import datetime, timedelta
 from   importlib import import_module
@@ -15,8 +14,6 @@ import util
 from bisect import bisect_left
 from detect_fsub import *
 import IBTrACS
-import Cyclone
-import ConstCyclone
 import d4PDF
 #--------------------------------------
 figmon = True
@@ -38,7 +35,8 @@ ly_obs = list(range(1980,2010+1))
 #lmon= range(1,12+1)
 lmon= list(range(1,12+1))
 
-lregion = ['WNP', 'NEA','NNEA']
+#lregion = ['WNP', 'NEA','NNEA']
+lregion = ['WNP']
 dbbox = {
     #'WNP':[[20,120],[47,150]],
     #'NEA':[[30,120],[47,150]],
@@ -76,23 +74,8 @@ wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
 miss =-9999
 miss_int= -9999
 
-#a1lat = d4PDF.Lat()   # dlat ~ 0.5615674
-#a1lon = d4PDF.Lon()   # dlon = 0.5625
-#
-#lthsst  = [27,27.5,28]
-#lexrvort = np.array([3])*1.0e-5
-##ltcrvort = np.array([5])*1.0e-5
-#ltcrvort = np.array([3])*1.0e-5
-#lthwcore= [0]
-##lthwcore= [-1,0,1]
-#lthdura = [36]
-#lthwind = [10,11,12,13]
-##lthwind = [10,13,15]
-##lthwdif = [-9999,-30,-20,-10]
-#lthwdif = [-9999,-30,-20,-10]
 
-
-lthsst  = [27,28]
+lthsst  = [27]
 lexrvort = np.array([3])*1.0e-5
 #ltcrvort = np.array([5])*1.0e-5
 ltcrvort = np.array([3])*1.0e-5
@@ -100,9 +83,23 @@ lthwcore= [0]
 #lthwcore= [-1,0,1]
 lthdura = [36]
 #lthwind = [10,13,15]
-lthwind = [8,10,12,14]
+lthwind = [12]
 #lthwdif = [-9999]
-lthwdif = [-9999,-30,-10]
+lthwdif = [-9999]
+
+
+
+#lthsst  = [27,28]
+#lexrvort = np.array([3])*1.0e-5
+##ltcrvort = np.array([5])*1.0e-5
+#ltcrvort = np.array([3])*1.0e-5
+#lthwcore= [0]
+##lthwcore= [-1,0,1]
+#lthdura = [36]
+##lthwind = [10,13,15]
+#lthwind = [8,10,12,14]
+##lthwdif = [-9999]
+#lthwdif = [-9999,-30,-10]
 
 
 

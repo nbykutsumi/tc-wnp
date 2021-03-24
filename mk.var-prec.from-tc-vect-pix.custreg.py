@@ -1,7 +1,7 @@
 # %%
 import matplotlib
 matplotlib.use('Agg')
-%matplotlib inline
+#%matplotlib inline
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import matplotlib.ticker as mticker
@@ -34,14 +34,16 @@ expr    = 'XX'
 lscen    = ["HPB","HPB_NAT"] # run={expr}-{scen}-{ens}
 #lscen    = ["HPB"] # run={expr}-{scen}-{ens}
 #lscen    = ["HPB_NAT"] # run={expr}-{scen}-{ens}
-#lens    = range(1,10+1)
+#lens    = range(1,2+1)
 lens    = range(1,50+1)
 xname   = "dslp"
 #xname   = "wmaxlw"
-yname   = "prc0500"
+yname  = "prc"
+radkm  = 500
 
-metric = "mean"
+#metric = "mean"
 #metric = "p99"
+metric = "p90"
 [[lllat,lllon],[urlat,urlon]] = [[0,100],[50,180]]   # for loading tc-vector data
 
 detectName = 'wsd_d4pdf_20201209-py38'
@@ -73,6 +75,11 @@ miss_int= -9999
 #----------------------------
 def percentile99(x):
     return np.nanpercentile(x, 99)
+
+def percentile90(x):
+    return np.nanpercentile(x, 90)
+
+
 
 #--- custom region masks ----
 lrname = ["MD","ST"]
@@ -123,21 +130,24 @@ for scen in ["HPB","HPB_NAT"]:
 
     for iens, ens in enumerate(lens):
         print("load",scen,ens)
-        xdir = vectbaseDir + '/%s/%s/%s-%03d'%(slabel, xname, scen, ens)
-        ydir = vectbaseDir + '/%s/%s/%s-%03d'%(slabel, yname, scen, ens)
-        nowdir = vectbaseDir + '/%s/%s/%s-%03d'%(slabel, "nowpos", scen, ens)
+        vectdir = vectbaseDir   + '/%s/tc-vect-%03dkm-pix/%s-%03d'%(slabel, radkm, scen, ens)
 
-        a1xvect = np.concatenate([np.load(xdir + "/%s.lat%03d-%03d.lon%03d-%03d.%04d.npy"%(xname,lllat,urlat,lllon,urlon,Year)) for Year in lYear])
-        a1yvect = np.concatenate([np.load(ydir + "/%s.lat%03d-%03d.lon%03d-%03d.%04d.npy"%(yname,lllat,urlat,lllon,urlon,Year)) for Year in lYear])
+        a1locx  = np.concatenate([np.load(vectdir + "/x.lat%03d-%03d.lon%03d-%03d.%04d.npy"%(lllat,urlat,lllon,urlon,Year)) for Year in lYear]).astype("int32")
+        a1locy  = np.concatenate([np.load(vectdir + "/y.lat%03d-%03d.lon%03d-%03d.%04d.npy"%(lllat,urlat,lllon,urlon,Year)) for Year in lYear]).astype("int32")
 
-        a1now = np.concatenate([np.load(nowdir + "/nowpos.lat%03d-%03d.lon%03d-%03d.%04d.npy"%(lllat,urlat,lllon,urlon,Year)) for Year in lYear])
+        a1xvect = np.concatenate([np.load(vectdir + "/%s.lat%03d-%03d.lon%03d-%03d.%04d.npy"%(xname,lllat,urlat,lllon,urlon,Year)) for Year in lYear])
+        a1yvect = np.concatenate([np.load(vectdir + "/%s.lat%03d-%03d.lon%03d-%03d.%04d.npy"%(yname,lllat,urlat,lllon,urlon,Year)) for Year in lYear])
+
+        a1now = a1locx + nxin*a1locy  # 0,1,2, .... nx*ny-1 (Python)
 
         if xname=="dslp":
-            a1xvect = a1xvect*0.01  # hPa
+            a1xvect = a1xvect.astype("float32")*(-0.01)  # hPa, calced as center - env, for some reason..
+        elif xname=="wmaxlw":
+            a1xvect = a1xvect.astype("float32")*0.01  # saved with scaled by 100
 
-        a1now = a1now - 1   # 1,2,3.. (Fortran) --> 0,1,2,...(Python)
+        a1yvect = a1yvect.astype("float32")   # mm/day
 
-        for isub, rname in enumerate(lrname): 
+        for isub, rname in enumerate(lrname):
             a1flag = d2mask[rname].flatten()[a1now]
             a1xvecttmp = ma.masked_where(a1flag !=1, a1xvect).compressed()
             a1yvecttmp = ma.masked_where(a1flag !=1, a1yvect).compressed()
@@ -145,8 +155,11 @@ for scen in ["HPB","HPB_NAT"]:
 
             if metric=="mean":
                 a1ave,_,_ = scipy.stats.binned_statistic(a1xvecttmp, a1yvecttmp, statistic="mean", bins=abnd)
+            elif metric=="p90":
+                a1ave,_,_ = scipy.stats.binned_statistic(a1xvecttmp, a1yvecttmp, statistic=percentile90, bins=abnd)
             elif metric=="p99":
                 a1ave,_,_ = scipy.stats.binned_statistic(a1xvecttmp, a1yvecttmp, statistic=percentile99, bins=abnd)
+
             else:
                 print("check metric", metric)
             #a1std,_,_ = scipy.stats.binned_statistic(a1xvecttmp, a1yvecttmp, statistic="mean", bins=abnd)
@@ -172,8 +185,8 @@ axs = axs.flatten()
 for isub,rname in enumerate(lrname):
     print("draw",isub)
     ax = axs[isub]
-    a2ave_his = ma.masked_invalid(np.array(dave_his[rname]))*60*60*24 # mm/day
-    a2ave_nat = ma.masked_invalid(np.array(dave_nat[rname]))*60*60*24 # mm/day
+    a2ave_his = ma.masked_invalid(np.array(dave_his[rname])) # mm/day
+    a2ave_nat = ma.masked_invalid(np.array(dave_nat[rname])) # mm/day
 
     a1ave_his = a2ave_his.mean(axis=0)
     a1ave_nat = a2ave_nat.mean(axis=0)
@@ -203,16 +216,30 @@ for isub,rname in enumerate(lrname):
     #    ax.set_xlim([10,30])
     #    ax.set_ylim([0,30])
 
+    #-- save figure data---------
+    figdatdir = "/home/utsumi/temp/bams2020/fig/dat/precip-for-%s"%(xname)
+    csvpath = figdatdir + "/prec.%s.%s.%s.csv"%(metric, scen, rname)
+
+    sout = "TC-intensity,HPB_mean,HPB_low,HPB_up,HPB_NAT_mean,HPB_NAT_low,HPB_NAT_up\n"
+    for i in range(len(acnt)):
+        sout = sout + "%s,%s,%s,%s,%s,%s,%s\n"%(acnt[i],a1ave_his[i],a1lw_his[i],a1up_his[i],a1ave_nat[i],a1lw_nat[i],a1up_nat[i])
+    sout=sout.strip()
+
+    util.mk_dir(figdatdir)
+    f=open(csvpath, "w"); f.write(sout); f.close()
+    print(csvpath)
+    #----------------------------
+
 plt.tight_layout(rect=[0, 0, 1, 0.96])  # save space for suptitle
 
-ssuptitle = "%s vs %s (%s) %04d-%04d ens:%03d-%03d"%(xname, yname, metric, iY, eY, lens[0],lens[-1])
+ssuptitle = "%s vs %s pix (%s) %04d-%04d ens:%03d-%03d"%(xname, yname, metric, iY, eY, lens[0],lens[-1])
 #ssuptitle = ssuptitle + "\nlat:%03d-%03d lon:%03d-%03d"%(lllat,urlat, lllon, urlon)
 plt.suptitle(ssuptitle)
 
-figpath = figdir + "/plot.mul.%s.vs.%s.%s.customreg.png"%(xname,yname, metric)
+figpath = figdir + "/plot.mul.%s.vs.%s.pix.%s.customreg.png"%(xname,yname, metric)
 plt.savefig(figpath)
 
-figpath = figdir + "/plot.mul.%s.vs.%s.%s.customreg.pdf"%(xname,yname, metric)
+figpath = figdir + "/plot.mul.%s.vs.%s.pix.%s.customreg.pdf"%(xname,yname, metric)
 plt.savefig(figpath)
 plt.show()
 print(figpath)

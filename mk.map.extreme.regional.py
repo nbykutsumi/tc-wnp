@@ -2,7 +2,7 @@
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use("Agg")
-%matplotlib inline
+#%matplotlib inline
 
 import cartopy.crs as ccrs
 import matplotlib.ticker as mticker
@@ -18,23 +18,24 @@ from bisect import bisect_left
 from importlib import import_module
 from numpy import ma
 
-#calcflag = True
-calcflag = False
+calcflag = True
+#calcflag = False
 figflag = True
 
 prj     = "d4PDF"
 model   = "__"
 expr    = 'XX'
-#lscen   = ['HPB']  # run={expr}-{scen}-{ens}
-lscen   = ['HPB_NAT'] # run={expr}-{scen}-{ens}
+lscen   = ['HPB']  # run={expr}-{scen}-{ens}
+#lscen   = ['HPB_NAT'] # run={expr}-{scen}-{ens}
 #lscen   = ['HPB','HPB_NAT'] # run={expr}-{scen}-{ens}
 
-lens    = list(range(1,50+1))
-#lens    = list(range(21,50+1))
-#lens    = [1,2]
+#lens    = list(range(1,50+1))
+#lens    = list(range(1,20+1))
+lens    = [1]
 miss_out = -9999.
 
-iY,eY = 1990,2010
+#iY,eY = 1990,2010
+iY,eY = 2001,2010
 #iY,eY = 1990,1990
 lY  = range(iY,eY+1)
 lM  = range(1,12+1)
@@ -95,7 +96,7 @@ for scen in lscen:
             a2ptile = np.percentile(a3dat, percent, axis=0)
         
             #--- Save -----
-            exdir = "/home/utsumi/temp/bams2020/extreme-prec-d/%s.%04d-%04d"%(scen,iY,eY)
+            exdir = "/home/utsumi/temp/bams2020/extreme-prec-d/%s.ens-%03d-%03d-yr-%04d-%04d"%(scen,lens[0],lens[-1],iY,eY)
             util.mk_dir(exdir)
             expath= exdir + "/prec.rp-%03d.%s.y-%03d-%03d.npy"%(rp, region, y00, y00+wy-1)
             np.save(expath, a2ptile)
@@ -103,7 +104,8 @@ for scen in lscen:
 #-- Join ------------
 for scen in lscen:
     for rp in lrp:
-        exdir = "/home/utsumi/temp/bams2020/extreme-prec-d/%s.%04d-%04d"%(scen,iY,eY)
+        #exdir = "/home/utsumi/temp/bams2020/extreme-prec-d/%s.%04d-%04d"%(scen,iY,eY)
+        exdir = "/home/utsumi/temp/bams2020/extreme-prec-d/%s.ens-%03d-%03d-yr-%04d-%04d"%(scen,lens[0],lens[-1],iY,eY)
 
         a2exp = np.concatenate([np.load(exdir + "/prec.rp-%03d.%s.y-%03d-%03d.npy"%(rp, region, y00, y00+wy-1)) for y00 in ly00], axis=0)
 
@@ -115,7 +117,7 @@ for scen in lscen:
 for scen in lscen:
     if figflag != True: continue
     for rp in lrp:
-        exdir = "/home/utsumi/temp/bams2020/extreme-prec-d/%s.%04d-%04d"%(scen,iY,eY)
+        exdir = "/home/utsumi/temp/bams2020/extreme-prec-d/%s.ens-%03d-%03d-yr-%04d-%04d"%(scen,lens[0],lens[-1],iY,eY)
         joinpath = exdir + "/prec.rp-%03d.%s.npy"%(rp, region)
         a2fig = np.load(joinpath) * 60*60*24  # mm/sec --> mm/day
 
@@ -140,8 +142,8 @@ for scen in lscen:
 
         #-- color boundaries norm ------
         #clevs = range(-20,20+1,4)
-        cmbnd = list(np.arange(0,600,50))
-        cmlabels = list(np.arange(0,600,100))
+        cmbnd = [0,40,80,120,160,200,300,400,500]
+
 
         cmap   = plt.cm.get_cmap(mycm, len(cmbnd)+1)  # define the colormap
         cmaplist = [cmap(i) for i in range(cmap.N)]
@@ -155,8 +157,8 @@ for scen in lscen:
 
         #-- title, figure name -----
         figdir  = "/home/utsumi/temp/bams2020/fig/map-prec"
-        figpath = figdir + "/map.prec.rp-%03d.%s.png"%(rp, region)
-        stitle = '%s-year R.P. mm/day %s\n'%(rp, scen) + '%04d-%04d'%(iY,eY)
+        figpath = figdir + "/map.prec.%s.rp-%03d.ens-%03d-%03d-yr-%04d-%04d.%s.png"%(scen,rp, lens[0],lens[-1],iY,eY,region)
+        stitle = '%s-year R.P. mm/day %s\n'%(rp, scen) + 'ens:%03d-%03d yr:%04d-%04d'%(lens[0],lens[-1],iY,eY)
 
         axmap.set_title(stitle)
 

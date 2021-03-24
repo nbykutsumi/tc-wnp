@@ -1,7 +1,7 @@
 # %%
 import matplotlib
 matplotlib.use('Agg')
-#%matplotlib inline
+%matplotlib inline
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import matplotlib.ticker as mticker
@@ -18,9 +18,9 @@ import socket
 import IBTrACS
 #import Cyclone
 #--------------------------------------
-calcbst= True
-#calcbst= False
-#figbst = True
+#calcbst= True
+calcbst= False
+figbst = True
 #figbst = False
 
 #calcobj= True
@@ -28,8 +28,8 @@ calcobj= False
 #figobj = True
 figobj = False
 
-#figmean = True
-figmean = False
+figmean = True
+#figmean = False
 
 ctype = 'TC'
 #ctype = 'ALL'
@@ -53,8 +53,8 @@ print(cmbnd)
 prj     = "d4PDF"
 model   = "__"
 expr    = 'XX'
-#scen    = 'HPB' # run={expr}-{scen}-{ens}
-scen    = 'HPB_NAT' # run={expr}-{scen}-{ens}
+scen    = 'HPB' # run={expr}-{scen}-{ens}
+#scen    = 'HPB_NAT' # run={expr}-{scen}-{ens}
 lens    = range(1,20+1)
 #lens    = range(21,50+1)
 #lens    = range(1,50+1)
@@ -181,11 +181,11 @@ def draw_map(a2dat, dpara):
 #---------------------------
 #iYbst,eYbst = 2000, 2010
 #iYbst,eYbst = 1980, 2018
-#iYbst,eYbst = 1980, 2010
+iYbst,eYbst = 1980, 2010
 #iYbst,eYbst = 1990, 2010
 #iYbst,eYbst = 1950,1959
 #iYbst,eYbst = 1960,2010
-iYbst,eYbst = 2017,2017
+#iYbst,eYbst = 2017,2017
 
 
 lYMbst = util.ret_lYM([iYbst,1],[eYbst,12])

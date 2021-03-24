@@ -1,7 +1,7 @@
 # %%
 import matplotlib
 matplotlib.use('Agg')
-%matplotlib inline
+#%matplotlib inline
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import matplotlib.ticker as mticker
@@ -210,7 +210,23 @@ for density in ["count"]:
         #ax2.plot(acnt, a1dif, "-",color="k")
         #ax2.set_yscale("log")
 
+        #-- save figure data -------------
+        figdatdir = "/home/utsumi/temp/bams2020/fig/dat/pdf-tc-intensity"
+        util.mk_dir(figdatdir)
+        csvpath = figdatdir + "/count-tc-intensity.%s.csv"%(rname)
+        avepath = figdatdir + "/ave.%s.csv"%(rname)
 
+        sout = "hPa,HPB_NAT,HPB\n"
+        for i in range(len(acnt)):
+            sout = sout + "%s,%s,%s\n"%(acnt[i],a1nat[i], a1his[i])
+
+        sout = sout.strip()
+        f=open(csvpath,"w"); f.write(sout); f.close()
+
+        sout = "HPB_NAT,%s\n"%(dave_nat[isub]) 
+        sout = sout + "HPB,%s"%(dave_his[isub]) 
+        f=open(avepath,"w"); f.write(sout); f.close()
+        print(csvpath) 
 
     plt.tight_layout(rect=[0, 0, 1, 0.96])  # save space for suptitle
 

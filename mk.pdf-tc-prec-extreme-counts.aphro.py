@@ -18,11 +18,11 @@ import calendar, socket, time
 import random
 import APHRODITE
 #--------------------------------------
-lYear0 = range(1980,1997+1)
-lYear1 = range(1998,2015+1)
+#lYear0 = range(1980,1997+1)
+#lYear1 = range(1998,2015+1)
 
-#lYear0 = range(1960,1987+1)
-#lYear1 = range(1988,2015+1)
+lYear0 = range(1960,1987+1)
+lYear1 = range(1988,2015+1)
 
 iY0,eY0 = lYear0[0],lYear0[-1]
 iY1,eY1 = lYear1[0],lYear1[-1]
@@ -52,8 +52,16 @@ figdir  = '/home/utsumi/temp/bams2020/tc-prec'
 util.mk_dir(figdir)
 radkm = 500 # km
 #iYbase,eYbase = 1980,1997
-lrp = [1,5]  # return period, years
+lrp = [1]  # return period, years
 
+#--- custom region masks ----
+#lrname = ["NJ","SJ", "KR", "EC","SC", "IC", "PH"]
+lrname = ["MD","ST"]
+d2mask = {}
+for rname in lrname:
+    maskdir = "/home/utsumi/temp/bams2020/mask"
+    maskpath= maskdir + "/mask.aphro.%s.npy"%(rname)
+    d2mask[rname] = ma.masked_equal(np.load(maskpath),0).mask
 
 #**************************
 # Load site mask
@@ -97,15 +105,15 @@ for rp in lrp:
 
     #-- bootstrap ----
     random.seed(time.time())
-    n = 500
+    nboot  = 1000
     nyear0 = len(lYear0)
     nyear1 = len(lYear1)
     lseq0 = list(range(nyear0))
     lseq1 = list(range(nyear1))
 
-    a3boot0 = np.zeros([n,ny,nx],"int32")*-9999
-    a3boot1 = np.zeros([n,ny,nx],"int32")*-9999
-    for i in range(n):
+    a3boot0 = np.zeros([nboot,ny,nx],"float32")*-9999
+    a3boot1 = np.zeros([nboot,ny,nx],"float32")*-9999
+    for i in range(nboot):
         li0 = random.choices(lseq0, k=nyear0)
         li1 = random.choices(lseq1, k=nyear1)
 
@@ -113,7 +121,44 @@ for rp in lrp:
         a3boot1[i] = a3num1[li1].sum(axis=0)
 
 
-    a3boot0 = a3boot0.astype("float32")
-    a3boot1 = a3boot1.astype("float32")
+    a3boot0 = a3boot0.astype("float32")/ len(lYear0) * rp
+    a3boot1 = a3boot1.astype("float32")/ len(lYear1) * rp
     #a2num = a2num.astype("float32") /len(lYearFig)*rp  # times/rp-year (e.g., rp=10 --> times/10-year)
- 
+
+    #*************************
+    # Figure
+    #--------------------------
+    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(6,6))
+    axs = axs.flatten()
+
+    for isub, subregion in enumerate(lrname):
+        ax = axs[isub]
+        a2mask = d2mask[subregion] * a2sitemask
+        a1vect0 = ma.masked_where(np.broadcast_to(a2mask, a3boot0.shape), a3boot0).mean(axis=(1,2))
+        a1vect1 = ma.masked_where(np.broadcast_to(a2mask, a3boot1.shape), a3boot1).mean(axis=(1,2))
+
+        if rp==1:
+            #a1bnd = np.arange(0,0.8,0.04)
+            a1bnd = np.arange(0,0.8,0.02)
+        elif rp==10:
+            a1bnd = np.arange(0,2,0.1)
+
+        a1cnt = 0.5*(a1bnd[:-1]+a1bnd[1:])
+        a1freq0, _ = np.histogram(a1vect0, bins=a1bnd, density=True)
+        a1freq1, _ = np.histogram(a1vect1, bins=a1bnd, density=True)
+
+        ax.plot(a1cnt, a1freq0, color="blue")
+        ax.plot(a1cnt, a1freq1, color="r")
+
+        #-- statistical test ---
+        tv, pv = scipy.stats.ttest_ind(a1vect0, a1vect1, equal_var=False, nan_policy="omit")
+        print(subregion,tv,pv)
+        stitle = "%s OBS rp:%d-year pv=%.2f [times/%d-year]"%(subregion, rp, pv, rp)
+        ax.set_title(stitle)
+
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.show()
+    #print(a1his)
+
+# %%

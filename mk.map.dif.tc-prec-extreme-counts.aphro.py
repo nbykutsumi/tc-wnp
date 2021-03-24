@@ -18,11 +18,11 @@ import calendar, socket, time
 import random
 import APHRODITE
 #--------------------------------------
-lYear0 = range(1980,1997+1)
-lYear1 = range(1998,2015+1)
+#lYear0 = range(1980,1997+1)
+#lYear1 = range(1998,2015+1)
 
-#lYear0 = range(1960,1987+1)
-#lYear1 = range(1988,2015+1)
+lYear0 = range(1960,1987+1)
+lYear1 = range(1988,2015+1)
 
 iY0,eY0 = lYear0[0],lYear0[-1]
 iY1,eY1 = lYear1[0],lYear1[-1]
@@ -52,7 +52,8 @@ figdir  = '/home/utsumi/temp/bams2020/tc-prec'
 util.mk_dir(figdir)
 radkm = 500 # km
 #iYbase,eYbase = 1980,1997
-lrp = [1,5]  # return period, years
+#lrp = [1,10]  # return period, years
+lrp = [10]  # return period, years
 
 
 #**************************
@@ -190,19 +191,18 @@ for rp in lrp:
     #cmbnd = list(np.arange(-2.5,2.5+0.01,0.25))
     #cmlabels = list(np.arange(-2.5,2.5+0.01,1))
     if rp in [1]:
-        #cmbnd = list(np.arange(-0.9, 0.9+0.001, 0.2))
-        cmbnd = list(np.arange(-0.9, 0.9+0.001, 0.2))
-        cmlabels= list(map(float, ["%.1f"%x for x in cmbnd]))
-    if rp in [5]:
+        #cmbnd = [-0.6,-0.5,-0.4,-0.3,-0.2,-0.1,0.1,0.2,0.3,0.4,0.5,0.6]
+        #cmlabels= [-0.5,-0.4,-0.3,-0.2,-0.1,0.1,0.2,0.3,0.4,0.5]
+        cmbnd = [-0.5,-0.4,-0.3,-0.2,-0.1,0.1,0.2,0.3,0.4,0.5]
+        cmlabels= [-0.4,-0.3,-0.2,-0.1,0.1,0.2,0.3,0.4]
+
+    elif rp in [5]:
         cmbnd = list(np.arange(-1.7, 1.7+0.001, 0.2))
         cmlabels= list(map(float, ["%.1f"%x for x in cmbnd]))
 
-    elif rp in [5]:
-        cmbnd = list(np.arange(-0.3, 0.3+0.001, 0.05))
-        cmlabels = [-0.3, -0.2, -0.1, 0, 0.1, 0.2, 0.3]
     elif rp in [10,20]:
-        cmbnd = list(np.arange(-0.5, 0.5+0.001, 0.1))
-        cmlabels = [-0.5,-0.4, -0.3, -0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5]
+        cmbnd = list(np.arange(-1.5, 1.5+0.001, 0.2))
+        cmlabels= list(map(float, ["%.1f"%x for x in cmbnd]))
 
     mycm = 'RdBu_r'
     
@@ -212,21 +212,24 @@ for rp in lrp:
     norm = matplotlib.colors.BoundaryNorm(cmbnd, ncolors=cmap.N, clip=False)
     
     #-- pcolormesh --
-    X,Y = np.meshgrid(a1lonbnd,a1latbnd)
+    #X,Y = np.meshgrid(a1lonbnd,a1latbnd)
+    #vmin, vmax = cmbnd[0], cmbnd[-1]
+    #im  = plt.pcolormesh(X,Y,a2fig, cmap=cmap, norm=norm, vmin=vmin, vmax=vmax)
+
+    X,Y = np.meshgrid(a1lon,a1lat)
     vmin, vmax = cmbnd[0], cmbnd[-1]
-    im  = plt.pcolormesh(X,Y,a2fig, cmap=cmap, norm=norm, vmin=vmin, vmax=vmax)
-    print(cmbnd)
+    im  = plt.scatter(X,Y,c=a2fig, s=40, cmap=cmap, norm=norm, vmin=vmin, vmax=vmax)
+
 
     #-- hatch --------------
     #a2hatch = ma.masked_inside(a2hatch, -0.5, 0.5) # should be adjusted considering 
     #plt.pcolor(X, Y, a2hatch, hatch="////", alpha=0.)
 
-    
     X,Y = np.meshgrid(a1lon,a1lat)
     X = ma.masked_where(a2hatch.mask, X)
     Y = ma.masked_where(a2hatch.mask, Y)
 
-    thcolor = {1:0.5, 5:0.9}[rp]
+    thcolor = {1:0.4, 5:0.9, 10:0.9}[rp]
     Xtmp = ma.masked_where(ma.masked_outside(a2fig, -thcolor, thcolor).mask, X)
     Ytmp = ma.masked_where(ma.masked_outside(a2fig, -thcolor, thcolor).mask, Y)
     plt.plot(Xtmp, Ytmp, ".", markersize=1.3, color="0.2")
@@ -234,8 +237,6 @@ for rp in lrp:
     Xtmp = ma.masked_where(ma.masked_inside(a2fig, -thcolor, thcolor).mask, X)
     Ytmp = ma.masked_where(ma.masked_inside(a2fig, -thcolor, thcolor).mask, Y)
     plt.plot(Xtmp, Ytmp, ".", markersize=1.3, color="0.8")
-
-
 
 
     #-- draw colorbar ------

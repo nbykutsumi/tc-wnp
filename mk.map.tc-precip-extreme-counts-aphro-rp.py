@@ -1,7 +1,7 @@
 # %%
 import matplotlib
 matplotlib.use('Agg')
-#%matplotlib inline
+%matplotlib inline
 import cartopy.crs as ccrs
 import matplotlib.ticker as mticker
 #----------------------------------
@@ -18,8 +18,8 @@ import socket
 import IBTrACS
 import APHRODITE
 #--------------------------------------
-calcflag = True
-#calcflag = False
+#calcflag = True
+calcflag = False
 figflag = True
 #figflag = False
 iY = 1960
@@ -61,7 +61,8 @@ radkm = 500  # km
 if radkm == 500:
     a2table = np.load("./tab.dydx4mask.APHRO.MA.050deg.nrady-008.0500km.npy")
 
-lrp = [1,5]  # return period, years
+#lrp = [1,5]  # return period, years
+lrp = [10]  # return period, years
 
 #************************************
 for rp in lrp:
@@ -206,6 +207,10 @@ for rp in lrp:
         #--contourf ----------
         X,Y = np.meshgrid(a1lonbnd, a1latbnd)
         im = axmap.pcolormesh(X,Y, a2fig, cmap=mycm, norm=norm)
+
+        #X,Y = np.meshgrid(a1lon, a1lat)
+        #im = axmap.scatter(X,Y, c=a2fig, s=2, cmap=mycm, norm=norm)
+        #--------------------- 
         cbar = plt.colorbar(im)
         cbar.set_ticks(cmlabels)
         cbar.set_ticklabels(cmlabels)

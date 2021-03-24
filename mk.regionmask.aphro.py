@@ -1,5 +1,4 @@
 # %%
-
 import numpy as np
 from numpy import ma
 import regionmask
@@ -7,16 +6,29 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import matplotlib
-import d4PDF
+import APHRODITE
+import socket
+import sys, os
 matplotlib.use("Agg")
 %matplotlib inline
 
-a1latcnt = d4PDF.Lat()
-a1loncnt = d4PDF.Lon()
-a1latbnd = d4PDF.LatBnd()
-a1lonbnd = d4PDF.LonBnd()
+hostname=socket.gethostname()
+if hostname=="shui":
+    dbbaseDir = "/tank/utsumi/data/APHRO/APHRO_V1101"
+elif hostname=="well":
+    dbbaseDir = "/home/utsumi/mnt/lab_tank/utsumi/data/APHRO/APHRO_V1101"
+else:
+    print("check hostname",hostname)
+    sys.exit()
 
-[[lllat,lllon],[urlat,urlon]] = [[0,100],[50,150]]   
+aphro = APHRODITE.v1101(region="MA", res="050", dbbaseDir=dbbaseDir)
+
+a1latcnt = aphro.Lat
+a1loncnt = aphro.Lon
+a1latbnd = aphro.LatBnd
+a1lonbnd = aphro.LonBnd
+
+[[lllat,lllon],[urlat,urlon]] = [[0,100],[50,150]]   # for figure
 
 #JP = np.array([[123,25],[123,23],[130,23],[135,30],[142,30],[150,46],[140,46],[135,40],[129,34]])   # [lon, lat]
 #SJ = np.array([[123,25],[123,23],[130,23],[135,30],[142,30],[150,46],[140,46],[135,40],[129,34]])   # [lon, lat]
@@ -70,7 +82,7 @@ for rname in lname:
     a2mask = r3mask.isel(region=(r3mask.names==rname)).values[0].astype("int16")
 
     maskdir = "/home/utsumi/temp/bams2020/mask"
-    maskpath= maskdir + "/mask.%s.npy"%(rname)
+    maskpath= maskdir + "/mask.aphro.%s.npy"%(rname)
     np.save(maskpath, a2mask)
     print(maskpath)
 

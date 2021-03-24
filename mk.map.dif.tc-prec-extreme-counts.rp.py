@@ -26,7 +26,7 @@ lens    = range(1,50+1)
 #lens    = range(1,2+1)
 #lens    = range(1,4+1)
 
-rp     = 5 # 1, 5, 10, 20
+rp     = 10 # 1, 5, 10, 20
 #radkm  = 200 # km
 radkm  = 500 # km
 figdir  = '/home/utsumi/temp/bams2020/fig/tc-prec'

@@ -1,7 +1,7 @@
 # %%
 import matplotlib
 matplotlib.use('Agg')
-%matplotlib inline
+#%matplotlib inline
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import matplotlib.ticker as mticker
@@ -152,6 +152,14 @@ for scen in lscen:
         print("check scen",scen)
         sys.exit()
 
+    print(adatall.shape)
+
+    #--- save data -----
+    figdatdir = "/home/utsumi/temp/bams2020/fig/dat/LMI-Latitude"
+    util.mk_dir(figdatdir)
+    datpath = figdatdir + "/lmi-latitude.%s.%s.npy"%(vname,scen)
+    np.save(datpath, adatall)
+    print(datpath)
 print(a2count_his.mean(), a2count_nat.mean())
 
 
