@@ -29,7 +29,7 @@ model   = "__"
 expr    = 'XX'
 #lens    = range(1,20+1)
 lens    = range(1,50+1)
-#lens    = range(1,5+1)
+#lens    = range(1,2+1)
 #lens    = range(3,9+1)
 
 wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
@@ -74,6 +74,7 @@ for scen in ["HPB","HPB_NAT"]:
         a2count = np.zeros([ny,nx], "int32") 
         nstep   = 0
         for Year in lYear:
+            print(scen,ens,Year)
             freqbasedir = '/home/utsumi/temp/bams2020/map-freq'
 
             freqdir = freqbasedir + '/%s/%s-%03d'%(slabel, scen, ens)
@@ -107,7 +108,8 @@ stitle = 'diff. (HIST - NAT) count/year ' + '%04d-%04d'%(iY,eY)
 figpath = figdir + '/map.dif.freq.tc.obj.%04d-%04d.png'%(iY,eY)
 #---------------------------
 figmap   = plt.figure(figsize=(6,4))
-axmap    = figmap.add_axes([0.1, 0.1, 0.7, 0.8], projection=ccrs.PlateCarree())
+#axmap    = figmap.add_axes([0.1, 0.1, 0.7, 0.8], projection=ccrs.PlateCarree())
+axmap    = figmap.add_axes([0.1, 0.1, 0.8, 0.8], projection=ccrs.PlateCarree())
 
 #-- grid lines ---
 gl       = axmap.gridlines(crs=ccrs.PlateCarree(), draw_labels=False, linewidth=1, linestyle=":", color="k", alpha=0.8)
@@ -120,8 +122,8 @@ axmap.set_extent([lllon,urlon,lllat,urlat])
 axmap.coastlines(color="k")
 
 #-- color boundaries norm --------
-#cmbnd = list(range(-45,45+1,10))
-cmbnd = list(np.arange(-4.5,4.5+0.1,1))
+#cmbnd = list(np.arange(-4.5,4.5+0.1,1))
+cmbnd = [-4, -3, -2, -1, -0.5, -0.1, 0.1, 0.5, 1, 2, 3, 4]
 mycm = 'RdBu_r'
 
 cmap   = plt.cm.get_cmap(mycm, len(cmbnd)+1)  # define the colormap
@@ -133,20 +135,24 @@ norm = matplotlib.colors.BoundaryNorm(cmbnd, ncolors=cmap.N, clip=False)
 X,Y = np.meshgrid(a1lonbnd,a1latbnd)
 vmin, vmax = cmbnd[0], cmbnd[-1]
 im  = plt.pcolormesh(X,Y,a2fig, cmap=cmap, vmin=vmin,vmax=vmax, norm=norm)
+#im  = plt.pcolormesh(X,Y,ma.masked_inside(a2fig,-0.1,0.1))
 
 #-- hatch --------------
 #a2hatch = ma.masked_inside(a2hatch, -5, 5) # should be adjusted considering 
-a2hatch = ma.masked_inside(a2hatch, -0.5, 0.5) # should be adjusted considering 
-plt.pcolor(X, Y, a2hatch, hatch="/", alpha=0.)
+a2hatch = ma.masked_inside(a2hatch, -0.1, 0.1) # should be adjusted considering 
+plt.pcolor(X, Y, a2hatch, hatch="//", alpha=0.)
 
 #-- draw colorbar ------
-cax = figmap.add_axes([0.79,0.2,0.05,0.6])
+#cax = figmap.add_axes([0.79,0.2,0.05,0.6])
+cax = figmap.add_axes([0.85,0.1,0.03,0.8])
 cbar= plt.colorbar(im, orientation='vertical', cax=cax)
 extend = "both"
 if cmbnd is not None:
     cbar.set_ticks(cbar.ax.get_yticks())
     if extend=='both':
-        cbar.set_ticklabels([""] + list(cbar.ax.get_yticklabels())[1:-1] + [""])
+        #cbar.set_ticklabels([""] + list(cbar.ax.get_yticklabels())[1:-1] + [""])
+        cbar.set_ticks(cmbnd[1:-1])
+        cbar.set_ticklabels(cmbnd[1:-1])
 
     if extend=='min':
         cbar.set_ticklabels([""] + list(cbar.ax.get_yticklabels())[1:])
@@ -164,7 +170,7 @@ plt.savefig(figpath)
 plt.show()
 print(figpath)
 
-
+# %%
 #***********************
 # Figure: ensemble mean (fractional change (%))
 #***********************

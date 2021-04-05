@@ -26,7 +26,7 @@ lens    = range(1,50+1)
 #lens    = range(1,2+1)
 #lens    = range(1,4+1)
 
-rp     = 10 # 1, 5, 10, 20
+rp     = 5 # 1, 5, 10, 20
 #radkm  = 200 # km
 radkm  = 500 # km
 figdir  = '/home/utsumi/temp/bams2020/fig/tc-prec'
@@ -71,6 +71,18 @@ thdura   = 36
 exrvortout = exrvort*1.0e+5
 tcrvortout = tcrvort*1.0e+5
 #************************************
+# Load total TC precip (HPB) for mask
+#************************************
+precbasedir = "/home/utsumi/temp/bams2020/tc-prec-%04dkm"%(radkm)
+avedir = precbasedir + "/ens-ave-%04d-%04d"%(iY,eY)  # this data is created by mk.map.tc-precip.py
+
+a3sum = np.array([np.load(avedir + "/precsum-tc-ave.%s.%03d.npy"%("HPB",ens)) for ens in lens])
+
+a3sum = ma.masked_less(a3sum, 0)
+
+a2tcprec = a3sum.mean(axis=0)[y0:y1+1,x0:x1+1] # unit: mm/year
+
+#************************************
 # Load data
 #************************************
 for scen in ["HPB","HPB_NAT"]:
@@ -100,8 +112,10 @@ a2dif = (a3dat_his.mean(axis=0) - a3dat_nat.mean(axis=0)) /len(lYear) *rp   # ti
 a2tv, a2pv = scipy.stats.ttest_ind(a3dat_his.filled(np.nan), a3dat_nat.filled(np.nan), axis=0, equal_var=False, nan_policy="omit")
 
 a2fig = a2dif
+a2fig = ma.masked_where(a2tcprec < 10, a2fig)
+
 a2hatch = ma.masked_where(a2pv>0.05, a2fig)
-#a2hatch = ma.masked_where(a2pv>0.1, a2fig)
+a2hatch = ma.masked_where(a2tcprec<10, a2hatch)
 
 #-- title, figure name -----
 stitle = 'diff. tc-precip-extreme counts (times/%s-yr)\n'%(rp) + '%04d-%04d ens:%03d-%03d rad:%04dkm'%(iY,eY,lens[0],lens[-1], radkm) 
@@ -109,7 +123,7 @@ figpath = figdir + '/map.dif.tc-prec-extreme-counts.%04dkm.%s.rp-%03d.%04d-%04d.
 #---------------------------
 figmap   = plt.figure(figsize=(6,4))
 axmap    = figmap.add_axes([0.1, 0.1, 0.8, 0.8], projection=ccrs.PlateCarree())
-
+axmap.set_facecolor("0.8")
 #-- grid lines ---
 gl       = axmap.gridlines(crs=ccrs.PlateCarree(), draw_labels=False, linewidth=1, linestyle=":", color="k", alpha=0.8)
 xticks   = np.arange(-180, 180+1, 15)

@@ -97,6 +97,32 @@ exrvortout = exrvort*1.0e+5
 tcrvortout = tcrvort*1.0e+5
 slabel = 'sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-wind-%02d-wdif-%d-du-%02d'%(thsst*10, exrvortout, tcrvortout, thwcore, thwind, thwdif, thdura)
 
+#--- Read TC frequency for masking ----------
+for scen in ["HPB","HPB_NAT"]:
+    lens = list(range(1,50+1))
+    a3freq = np.empty([len(lens),nyout,nxout], "float32")
+    for iens,ens in enumerate(lens):
+        a2count = np.zeros([nyout,nxout], "int32") 
+        nstep   = 0
+        for Year in lYear:
+            freqbasedir = '/home/utsumi/temp/bams2020/map-freq'
+
+            freqdir = freqbasedir + '/%s/%s-%03d'%(slabel, scen, ens)
+
+            countpath= freqdir + '/a2count.tc.obj.%04d.npy'%(Year)
+            nsteppath= freqdir + '/nstep.tc.obj.%04d.npy'%(Year)
+
+            a2count = a2count + np.load(countpath)
+            nstep   = nstep + np.load(nsteppath)
+
+        a3freq[iens] = ma.masked_less(a2count,0) *4* 365/ float(nstep) # times / year
+    if scen=="HPB":
+        a2freq_his = a3freq.mean(axis=0)
+    elif scen=="HPB_NAT":
+        a2freq_nat = a3freq.mean(axis=0)
+a2dfreq = a2freq_his - a2freq_nat
+#----------------------------------------------
+
 #-- Draw ----
 for scen in lscen:
     speeddir = speedbasedir + "/%s"%(slabel)
@@ -228,6 +254,8 @@ print(figpath)
 # Figure: difference in ratio (% increase)
 #****************************************************
 a2fig = a2difrat
+a2fig = ma.masked_where(ma.masked_inside(a2dfreq, -0.1, 0.1).mask, a2fig)
+
 a2hatch = ma.masked_where(a2pv>0.05, a2fig)
 #a2hatch = ma.masked_where(a2fig<0., a2fig)
 
@@ -253,9 +281,8 @@ axmap.coastlines(color="k")
 #cmbnd = list(np.arange(-20,20+0.1,5))
 #cmlabels = list(np.arange(-20,20+0.1,5))
 
-cmbnd = list(np.arange(-40,-5+0.01,5)) + [-2,2] + list(np.arange(5,40+0.01,5))
-cmlabels = [-40,-30,-20,-10,-5,-2,2,5,10,20,30,40]
-
+cmbnd = [-25,-20,-15,-10,-5,-2,2,5,10,15,20,25]
+cmlabels = cmbnd[1:-1]
 mycm = 'RdBu_r'
 
 cmap   = plt.cm.get_cmap(mycm, len(cmbnd)+1)  # define the colormap
@@ -334,6 +361,7 @@ for scen in ["HPB","HPB_NAT"]:
         a2factor = ma.masked_where(a2avehis==0, a2avenat)/a2avehis - 1
         a2fig = a3freq.mean(axis=0) * a2factor  # equivalent count difference
 
+    a2fig = ma.masked_where(ma.masked_inside(a2dfreq, -0.1, 0.1).mask, a2fig)
 
     a2hatch = ma.masked_where(a2pv>0.05, a2fig)
     #a2hatch = ma.masked_where(a2fig<0., a2fig)
@@ -421,7 +449,7 @@ for scen in ["HPB_NAT"]:
         a2factor = ma.masked_where(a2avehis==0, a2avenat)/a2avehis - 1
         a2fig = ma.masked_where(a2dfreq==0, a3freq.mean(axis=0) * a2factor) / np.abs(a2dfreq) * 100  # percent in equivalent count difference
 
-    a2fig = ma.masked_where(ma.masked_inside(a2dfreq, -0.5, 0.5).mask, a2fig)
+    a2fig = ma.masked_where(ma.masked_inside(a2dfreq, -0.1, 0.1).mask, a2fig)
 
     a2hatch = ma.masked_where(a2pv>0.05, a2fig)
     #a2hatch = ma.masked_where(a2fig<0., a2fig)
@@ -429,7 +457,8 @@ for scen in ["HPB_NAT"]:
     #---------------------------
     figmap   = plt.figure(figsize=(6,4))
     axmap    = figmap.add_axes([0.1, 0.1, 0.8, 0.8], projection=ccrs.PlateCarree())
-    axmap.set_facecolor("gray") 
+    #axmap.set_facecolor("gray") 
+    axmap.set_facecolor("white") 
 
     #-- grid lines ---
     gl       = axmap.gridlines(crs=ccrs.PlateCarree(), draw_labels=False, linewidth=1, linestyle=":", color="k", alpha=0.8)
@@ -449,8 +478,9 @@ for scen in ["HPB_NAT"]:
     #cmbnd = list(np.arange(-1.2,1.2+0.01, 0.1))
     #cmlabels = [-1.2,-1.0,-0.8,-0.6,-0.4,-0.2,0,0.2,0.4,0.6,0.8,1.0,1.2]
 
-    cmbnd = np.arange(-50,50+1,10) 
-    cmlabels = cmbnd
+    #cmbnd = np.arange(-50,50+1,10) 
+    cmbnd = np.arange(-60,60+1,10) 
+    cmlabels = cmbnd[1:-1]
 
     mycm = 'RdBu_r'
     
@@ -468,13 +498,13 @@ for scen in ["HPB_NAT"]:
     X,Y = np.meshgrid(o1lonbnd, o1latbnd)
     im  = plt.pcolormesh(X,Y,a2fig, cmap=cmap, norm=norm)
     print(cmbnd)
-    
     #-- hatch --------------
     #plt.contourf(X, Y, a2hatch, hatches=["////"], alpha=0.)
     plt.pcolor(X,Y,a2hatch, hatch="//", alpha=0)
     
     #-- draw colorbar ------
-    cax = figmap.add_axes([0.85,0.2,0.03,0.6])
+    #cax = figmap.add_axes([0.85,0.2,0.03,0.6])
+    cax = figmap.add_axes([0.85,0.15,0.03,0.7]) 
     cbar= plt.colorbar(im, orientation='vertical', cax=cax)
     cbar.set_ticks(cmlabels)
     cbar.set_ticklabels(cmlabels)

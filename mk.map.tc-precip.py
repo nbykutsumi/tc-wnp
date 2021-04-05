@@ -20,6 +20,8 @@ import socket
 calcflag = False
 #calcave  = True
 calcave  = False
+#calcsum  = True
+calcsum  = False
 figflag  = True
 #figflag  = False
 iY = 1990
@@ -203,6 +205,7 @@ for scen in lscen:
             print(sumpath)
 
 #*** Make average of each ensemble ***
+""" average TC precipitation rate conditioned on TC events """
 for scen in lscen:
     if calcave != True: continue
     for iens,ens in enumerate(lens):
@@ -210,15 +213,6 @@ for scen in lscen:
 
         precbasedir = "/home/utsumi/temp/bams2020/tc-prec-%04dkm"%(radkm)
 
-        ##--- test ----------
-        #a3tmp = np.load(precbasedir + "/%s.%03d/prec-tc.%s.%04d.npy"%(scen,ens,region,2000))
-        #a3tmp = ma.masked_less(a3tmp,0)
-        #a2tmp = a3tmp[243]*60*60*24
-        #plt.imshow(a2tmp, origin="lower")
-        #plt.show()
-        #plt.colorbar()
-        #print(a3tmp.min())
-        #sys.exit()
         ##--------------------
         """
         prec-tc 3D array: Non-TC pixel is filled by missing value (-9999).
@@ -230,19 +224,44 @@ for scen in lscen:
         #-- Save ---
         avedir = precbasedir + "/ens-ave-%04d-%04d"%(iY,eY)
         util.mk_dir(avedir)
-        avepath= avedir + "/prec-tc-ave.%s.%03d.npy"%(scen,ens)
+        avepath= avedir + "/precrate-tc-ave.%s.%03d.npy"%(scen,ens)
         np.save(avepath, a2tmp.astype("float32"))
         print(avepath)
         #-----------
 
+
+#*** Make total annual TC precipitation for each ensemble ***
+""" Total TC precipitation """
+for scen in lscen:
+    if calcsum != True: continue
+    for iens,ens in enumerate(lens):
+        print(scen,ens)
+
+        precbasedir = "/home/utsumi/temp/bams2020/tc-prec-%04dkm"%(radkm)
+
+        ##--------------------
+        a2tmp = ma.masked_less(np.array([np.load(precbasedir + "/%s.%03d/sum.%04d.npy"%(scen,ens,Year)) for Year in lYear]), 0).mean(axis=0).filled(-9999.) *60*60*24  # mm/year
+
+
+        #-- Save ---
+        avedir = precbasedir + "/ens-ave-%04d-%04d"%(iY,eY)
+        util.mk_dir(avedir)
+        avepath= avedir + "/precsum-tc-ave.%s.%03d.npy"%(scen,ens)
+        np.save(avepath, a2tmp.astype("float32"))
+        print(avepath)
+        #-----------
+
+
+
 ##*** Draw map *************
+""" average TC precipitation rate mm/day """
 for scen in lscen:
     if figflag !=True: continue
 
     precbasedir = "/home/utsumi/temp/bams2020/tc-prec-%04dkm"%(radkm)
     avedir = precbasedir + "/ens-ave-%04d-%04d"%(iY,eY)  # this data is created by mk.map.tc-precip.py
 
-    a3rat = np.array([np.load(avedir + "/prec-tc-ave.%s.%03d.npy"%(scen,ens)) for ens in lens])
+    a3rat = np.array([np.load(avedir + "/precrate-tc-ave.%s.%03d.npy"%(scen,ens)) for ens in lens])
     
     a3rat = ma.masked_less(a3rat, 0)
 
@@ -299,8 +318,8 @@ for scen in lscen:
     plt.colorbar(im)
 
     #-- title, figure name -----
-    figpath = figdir + '/map.prec-tc.%s.%04d-%04d.png'%(scen,iY,eY)
-    stitle = 'TC precipitation mm/day %s\n'%(scen) + '%04d-%04d ens:%03d-%03d'%(iY,eY,lens[0],lens[-1])
+    figpath = figdir + '/map.precrate-tc.%s.%04d-%04d.png'%(scen,iY,eY)
+    stitle = 'TC precipitation rate mm/day %s\n'%(scen) + '%04d-%04d ens:%03d-%03d'%(iY,eY,lens[0],lens[-1])
 
     axmap.set_title(stitle)
 
@@ -309,5 +328,85 @@ for scen in lscen:
 
     plt.savefig(figpath)
     print(figpath)
+
+##*** Draw map *************
+""" Annual total TC precipitation mm/year """
+for scen in lscen:
+    if figflag !=True: continue
+
+    precbasedir = "/home/utsumi/temp/bams2020/tc-prec-%04dkm"%(radkm)
+    avedir = precbasedir + "/ens-ave-%04d-%04d"%(iY,eY)  # this data is created by mk.map.tc-precip.py
+
+    a3sum = np.array([np.load(avedir + "/precsum-tc-ave.%s.%03d.npy"%(scen,ens)) for ens in lens])
+    
+    a3sum = ma.masked_less(a3sum, 0)
+
+    a2fig = a3sum.mean(axis=0)[y0:y1+1,x0:x1+1] # unit: mm/year
+
+
+    [[lllat,lllon],[urlat,urlon]] = dBBox[region]
+    a1lat = d4PDF.Lat()
+    a1lon = d4PDF.Lon()
+    y0 = bisect_left(a1lat, lllat)
+    y1 = bisect_left(a1lat, urlat)
+    x0 = bisect_left(a1lon, lllon)
+    x1 = bisect_left(a1lon, urlon)
+   
+    X,Y = np.meshgrid(a1lon[x0:x1+1], a1lat[y0:y1+1])
+
+    fig = plt.figure(figsize=(6,4))
+    axmap  = fig.add_axes([0.1,0.1,0.8,0.8], projection=ccrs.PlateCarree())
+    axmap.coastlines()
+
+    gl = axmap.gridlines(crs=ccrs.PlateCarree(), draw_labels=False, linewidth=1, linestyle=":", color="k", alpha=0.8)
+    xticks = np.arange(-180,180+1,15)
+    yticks = np.arange(-90,90+1,15)
+    gl.xlocator = mticker.FixedLocator(xticks)
+    gl.ylocator = mticker.FixedLocator(yticks)
+    axmap.set_xticks(xticks, crs = ccrs.PlateCarree())
+    axmap.set_yticks(yticks, crs = ccrs.PlateCarree())
+
+    axmap.set_extent([lllon,urlon,lllat,urlat])
+
+    #-- Make new colormap (white at the lower end) --
+    upper = matplotlib.cm.jet(np.arange(256))
+    #lower = np.ones((int(256/4),4))
+    lower = np.ones((int(256/8),4))
+    for i in range(3):
+        lower[:,i] = np.linspace(1, upper[0,i], lower.shape[0])
+    mycm = np.vstack(( lower, upper ))
+    mycm = matplotlib.colors.ListedColormap(mycm, name='myColorMap', N=mycm.shape[0])
+
+    #-- color boundaries norm ------
+    cmbnd = [0,10,50,100,200,300,400,500,600,700,800,900]
+
+    cmap   = plt.cm.get_cmap(mycm, len(cmbnd)+1)  # define the colormap
+    cmaplist = [cmap(i) for i in range(cmap.N)]
+    cmap = matplotlib.colors.ListedColormap(cmaplist)
+    norm = matplotlib.colors.BoundaryNorm(cmbnd, ncolors=cmap.N, clip=False)
+    #--extent and coast lines ------
+    axmap.set_extent([lllon,urlon,lllat,urlat])
+    axmap.coastlines()
+
+    #--contourf ----------
+    im = axmap.contourf(X,Y, a2fig, levels=cmbnd, cmap=mycm, extend="max")
+    cbar = plt.colorbar(im)
+    cbar.set_ticks(cmbnd) 
+    cbar.set_ticklabels(cmbnd) 
+    
+    #-- title, figure name -----
+    figpath = figdir + '/map.precsum-tc.%s.%04d-%04d.png'%(scen,iY,eY)
+    stitle = 'Annual TC precipitation mm/year %s\n'%(scen) + '%04d-%04d ens:%03d-%03d'%(iY,eY,lens[0],lens[-1])
+
+    axmap.set_title(stitle)
+
+
+    plt.show()
+
+    plt.savefig(figpath)
+    print(figpath)
+
+
+
 
 # %%

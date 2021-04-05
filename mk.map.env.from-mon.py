@@ -1,4 +1,4 @@
-# %%
+# 6%
 import matplotlib
 matplotlib.use('Agg')
 %matplotlib inline
@@ -19,9 +19,10 @@ import scipy.stats
 #--------------------------------------
 #calcflag = True
 calcflag = False
-#figflag  = True
-figflag  = False
+figflag  = True
+#figflag  = False
 difflag  = True
+#difflag  = False
 iY = 1990
 eY = 2010
 lYear = range(iY,eY+1)
@@ -42,8 +43,9 @@ lens    = list(range(1,50+1))
 #lens    = list(range(1,2))
 
 #lvname = ["TGEF","SLP"]
-lvname = ["TGEF"]
-#lvname = ["SLP"]
+#lvname = ["TGEF"]
+#lvname = ["TA","PWATER"]
+lvname = ["PWATER"]
 
 region = "NP"
 dBBox = {"NP" :[[0,100],[50,250]],
@@ -103,7 +105,10 @@ for vname in lvname:
             a2fig = a2fig -273.15 # K --> deg.C
         elif vname == "SLP": 
             a2fig = a2fig * 0.01  # Pa --> hPa
-    
+        elif vname == "TA":
+            a2fig = a2fig -273.15 # K --> degree C
+
+
         X,Y = np.meshgrid(a1lon, a1lat)
 
         clon= 180
@@ -134,6 +139,10 @@ for vname in lvname:
             #cmlabels = list(np.arange(0,50+1,10))
         elif vname=="SLP":
             cmbnd = list(np.arange(1004,1024+1,1))
+        elif vname=="PWATER":
+            cmbnd = list(np.arange(6,60+0.01,4))
+        elif vname=="TA":
+            cmbnd = list(np.arange(6,29+0.01,1))
 
         cmap   = plt.cm.get_cmap(mycm, len(cmbnd)+1)  # define the colormap
         cmaplist = [cmap(i) for i in range(cmap.N)]
@@ -203,6 +212,13 @@ for vname in lvname:
         elif vname=="SLP":
             cmbnd = list(np.arange(-0.9,0.9+0.01,0.2))
             cmlabels = cmbnd
+        elif vname=="PWATER":
+            cmbnd = list(np.arange(-4,4+0.01,1))
+            cmlabels = cmbnd
+        elif vname=="TA":
+            cmbnd = list(np.arange(-1.6,1.6+0.01,0.4))
+            cmlabels = list(map(float, ["%.1f"%(x) for x in cmbnd]))
+
 
         mycm = 'RdBu_r'
         cmap   = plt.cm.get_cmap(mycm, len(cmbnd)+1)  # define the colormap
