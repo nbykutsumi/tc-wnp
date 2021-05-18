@@ -1,7 +1,7 @@
 # %%
 import matplotlib
 matplotlib.use('Agg')
-%matplotlib inline
+#%matplotlib inline
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import matplotlib.ticker as mticker
@@ -20,49 +20,39 @@ import IBTrACS
 #--------------------------------------
 #calcbst= True
 calcbst= False
-figbst = True
-#figbst = False
+#figbst = True
+figbst = False
 
-#calcobj= True
-calcobj= False
+calcobj= True
+#calcobj= False
 #figobj = True
 figobj = False
 
-figmean = True
-#figmean = False
+#figmean = True
+figmean = False
 
 ctype = 'TC'
 #ctype = 'ALL'
 
-iY, eY = 1980,2010
-#iY, eY = 1990,2010
-#iY, eY = 2001,2010
+#iY, eY = 1980,2010
+iY, eY = 1990,2010
+#iY, eY = 1980,1989
 lYear = range(iY,eY+1)
 lMon  = range(1,12+1)
 lYM = util.ret_lYM([iY,1],[eY,12])
 
-#cmbnd = [0,0.1, 0.3, 0.5, 1, 2, 3, 5, 10, 20, 30, 50]
-#cmbnd = np.arange(0,50,4)
-#cmbnd = [0,1,5] + range(10,50,5)
-#cmbnd = np.array(cmbnd)
-#cmbnd = np.arange(0,50,4)
-cmbnd = np.arange(0,50,4)
-print(cmbnd)
-#cmbnd = None
 #-----------------
 prj     = "d4PDF"
 model   = "__"
 expr    = 'XX'
-scen    = 'HPB' # run={expr}-{scen}-{ens}
-#scen    = 'HPB_NAT' # run={expr}-{scen}-{ens}
+#lscen   = ["HPB","HPB_NAT"]
+#lscen   = ["HPB"]
+lscen   = ["HPB_NAT"]
 lens    = range(1,20+1)
 #lens    = range(21,50+1)
 #lens    = range(1,50+1)
 #lens    = [20]
 #lens    = range(3,9+1)
-res     = "320x640"
-noleap  = False
-
 
 detectName = 'wsd_d4pdf_20201209-py38'
 #detectName = 'wsd_d4pdf_20200813'
@@ -73,12 +63,6 @@ Cyclone     = import_module("%s.Cyclone"%(detectName))  # test
 d4PDF       = import_module("%s.d4PDF"%(detectName))
 #IBTrACS     = import_module("%s.IBTrACS"%(detectName))
 
-
-wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
-outbaseDir = '/home/utsumi/temp/bams2020/map-freq'
-util.mk_dir(outbaseDir)
-figdir  = '/home/utsumi/temp/bams2020/fig/map-freq'
-util.mk_dir(figdir)
 #----------------------------------
 a1latin = d4PDF.Lat()
 a1lonin = d4PDF.Lon()
@@ -86,9 +70,17 @@ nyin    = len(a1latin)
 nxin    = len(a1lonin)
 
 miss_int= -9999
-dgrid = 5
-a1latbnd  = np.arange(-90,90+0.01, dgrid)
-a1lonbnd  = np.arange(0,360+0.01, dgrid)
+#dgrid = 5
+dgrid = 2.5
+#shift = True
+shift = False
+if shift==True:
+    a1latbnd  = np.arange(-90+dgrid*0.5,90+0.01, dgrid)
+    a1lonbnd  = np.arange(0,360+0.01, dgrid)
+else:
+    a1latbnd  = np.arange(-90,90+0.01, dgrid)
+    a1lonbnd  = np.arange(0,360+0.01, dgrid)
+
 ny = len(a1latbnd) - 1
 nx = len(a1lonbnd) - 1
 lonbnd0 = a1lonbnd[0]
@@ -100,6 +92,22 @@ a1latbndfig = np.arange(lllat, urlat+0.01, dgrid)
 a1lonbndfig = np.arange(lllon, urlon+0.01, dgrid)
 #nyfig = a1latbnd.shape[0] -1
 #nxfig = a1lonbnd.shape[0] -1
+
+if dgrid==5.0:
+    cmbnd = np.arange(0,50,4)  # for colorbar
+elif dgrid==2.5:
+    cmbnd = np.arange(0,13,1)  # for colorbar
+print(cmbnd)
+
+#---------------------------------
+wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
+outbaseDir = '/home/utsumi/temp/bams2020/map-freq-%.1f'%(dgrid)
+if shift ==True:
+    outbaseDir + "-shift"
+util.mk_dir(outbaseDir)
+figdir  = '/home/utsumi/temp/bams2020/fig/map-freq'
+util.mk_dir(figdir)
+
 
 #**************************
 def draw_map(a2dat, dpara):
@@ -250,7 +258,7 @@ if figbst is True:
     a2fig = ma.masked_less(a2fig,0)*4*365  # times/year
     dpara = {}
     dpara['title'] = 'count/year (Best track) %04d-%04d'%(iYbst,eYbst)
-    dpara['figpath'] = figdir + '/map.freq.tc.bst.%04d-%04d.png'%(iYbst,eYbst)
+    dpara['figpath'] = figdir + '/map.freq.tc.bst.%04d-%04d.res-%.1f.png'%(iYbst,eYbst,dgrid)
     dpara['cmbnd']   = cmbnd
     dpara['extend']  = "max"
     draw_map(a2fig, dpara)
@@ -302,153 +310,155 @@ for (thsst,exrvort,tcrvort,thwcore,thdura,thwind,thwdif) in lkey:
     #slabel = 'sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-wind-%02d-wdif-%d-du-%02d'%(thsst, exrvortout, tcrvortout, thwcore, thwind, thwdif, thdura)
     slabel = 'sst-%d.ex-%.2f.tc-%.2f.wc-%.1f-wind-%02d-wdif-%d-du-%02d'%(thsst*10, exrvortout, tcrvortout, thwcore, thwind, thwdif, thdura)
 
-    for ens in lens:
-        for Year in lYear:
-            if calcobj is not True: continue
-            for Mon in lMon:
 
-                eday   = calendar.monthrange(Year,Mon)[1]
-                iDTime = datetime(Year,Mon,1,0)
-                eDTime = datetime(Year,Mon,eday,18)
-                lDTime = util.ret_lDTime(iDTime,eDTime,timedelta(hours=6))
-
-                ltclonlat = []
-                print(('ens=',ens))
-                #-------------------
-                wsDir= wsbaseDir + '/%s-%s-%03d'%(expr, scen, ens)
+    for scen in lscen:
+        for ens in lens:
+            for Year in lYear:
+                if calcobj is not True: continue
+                for Mon in lMon:
     
-                cy  = Cyclone.Cyclone(baseDir=wsDir, const=const)
-                dexcxy, dtcxy  = cy.mkInstDictC_objTC([Year,Mon],[Year,Mon],varname='vortlw')
-
-                ltcxy = []
-                for ltmp in list(dtcxy.values()):
-                    ltcxy = ltcxy + ltmp
-
-                #-------------
-                if ctype == 'ALL': 
-                    for ltmp in list(dexcxy.values()):
+                    eday   = calendar.monthrange(Year,Mon)[1]
+                    iDTime = datetime(Year,Mon,1,0)
+                    eDTime = datetime(Year,Mon,eday,18)
+                    lDTime = util.ret_lDTime(iDTime,eDTime,timedelta(hours=6))
+    
+                    ltclonlat = []
+                    print(('ens=',ens))
+                    #-------------------
+                    wsDir= wsbaseDir + '/%s-%s-%03d'%(expr, scen, ens)
+        
+                    cy  = Cyclone.Cyclone(baseDir=wsDir, const=const)
+                    dexcxy, dtcxy  = cy.mkInstDictC_objTC([Year,Mon],[Year,Mon],varname='vortlw')
+    
+                    ltcxy = []
+                    for ltmp in list(dtcxy.values()):
                         ltcxy = ltcxy + ltmp
-                #-------------
-                for tcxy in ltcxy:
-                    x,y,var = tcxy
-                    lon,lat = a1lonin[x],a1latin[y]
-                    ltclonlat.append([lon,lat,var])
-
-
-                #-- Map --------
+    
+                    #-------------
+                    if ctype == 'ALL': 
+                        for ltmp in list(dexcxy.values()):
+                            ltcxy = ltcxy + ltmp
+                    #-------------
+                    for tcxy in ltcxy:
+                        x,y,var = tcxy
+                        lon,lat = a1lonin[x],a1latin[y]
+                        ltclonlat.append([lon,lat,var])
+    
+    
+                    #-- Map --------
+                    a2count = np.zeros([ny,nx],int32) 
+                    for (lon,lat,_) in ltclonlat:
+                        ix = int((lon-lonbnd0)/dgrid)
+                        iy = int((lat-latbnd0)/dgrid)
+                        if (ix<0)or(ix>nx-1)or(iy<0)or(iy>ny-1): continue
+                        a2count[iy,ix] = a2count[iy,ix] + 1
+    
+                    a2freq = a2count.astype('float32')/len(lDTime)
+    
+                    dobj   = {}
+                    dobj['a2count'] = a2count
+                    dobj['a2freq' ] = a2freq
+                    dobj['iDTime']= iDTime
+                    dobj['eDTime']= eDTime
+                    dobj['nstep'] = len(lDTime)
+                    dobj['a1latbnd'] = a1latbnd
+                    dobj['a1lonbnd'] = a1lonbnd
+                    dobj['dgrid']    = dgrid
+                    dobj['const'] = const
+                    dobj['tcrvort'] = tcrvort
+    
+                    #-- Save --------
+                    outDir = outbaseDir + '/%s/%s-%03d'%(slabel, scen, ens)
+                    util.mk_dir(outDir)
+    
+                    for vname in dobj.keys():
+                        objPath= outDir + '/%s.tc.obj.%04d.%02d.npy'%(vname,Year,Mon)
+                        np.save(objPath, dobj[vname])
+                        print(objPath)
+    
+                #-- Make annual data -----
                 a2count = np.zeros([ny,nx],int32) 
-                for (lon,lat,_) in ltclonlat:
-                    ix = int((lon-lonbnd0)/dgrid)
-                    iy = int((lat-latbnd0)/dgrid)
-                    if (ix<0)or(ix>nx-1)or(iy<0)or(iy>ny-1): continue
-                    a2count[iy,ix] = a2count[iy,ix] + 1
-
-                a2freq = a2count.astype('float32')/len(lDTime)
-
+                nstep   = 0
+                outDir = outbaseDir + '/%s/%s-%03d'%(slabel, scen, ens)
+                for Mon in lMon:
+                    a2countTmp = np.load(outDir + '/a2count.tc.obj.%04d.%02d.npy'%(Year,Mon))
+                    nstepTmp   = np.load(outDir + '/nstep.tc.obj.%04d.%02d.npy'%(Year,Mon))
+    
+                    a2count = a2count + a2countTmp
+                    nstep   = nstep + nstepTmp
+    
+                a2freq = a2count.astype("float32") / nstep
+    
                 dobj   = {}
                 dobj['a2count'] = a2count
                 dobj['a2freq' ] = a2freq
-                dobj['iDTime']= iDTime
-                dobj['eDTime']= eDTime
-                dobj['nstep'] = len(lDTime)
+                dobj['iDTime']= datetime(Year,1,1,0)
+                dobj['eDTime']= datetime(Year,12,31,18)
+                dobj['nstep'] = nstep
                 dobj['a1latbnd'] = a1latbnd
                 dobj['a1lonbnd'] = a1lonbnd
                 dobj['dgrid']    = dgrid
                 dobj['const'] = const
                 dobj['tcrvort'] = tcrvort
-
-                #-- Save --------
-                outDir = outbaseDir + '/%s/%s-%03d'%(slabel, scen, ens)
-                util.mk_dir(outDir)
-
+    
                 for vname in dobj.keys():
-                    objPath= outDir + '/%s.tc.obj.%04d.%02d.npy'%(vname,Year,Mon)
+                    objPath= outDir + '/%s.tc.obj.%04d.npy'%(vname,Year)
                     np.save(objPath, dobj[vname])
                     print(objPath)
-
-            #-- Make annual data -----
-            a2count = np.zeros([ny,nx],int32) 
+    
+    
+            #------------------------
+            # Figure for each ensemble
+            a2count = np.zeros([ny,nx],'int32')
             nstep   = 0
-            outDir = outbaseDir + '/%s/%s-%03d'%(slabel, scen, ens)
-            for Mon in lMon:
-                a2countTmp = np.load(outDir + '/a2count.tc.obj.%04d.%02d.npy'%(Year,Mon))
-                nstepTmp   = np.load(outDir + '/nstep.tc.obj.%04d.%02d.npy'%(Year,Mon))
-
-                a2count = a2count + a2countTmp
-                nstep   = nstep + nstepTmp
-
-            a2freq = a2count.astype("float32") / nstep
-
-            dobj   = {}
-            dobj['a2count'] = a2count
-            dobj['a2freq' ] = a2freq
-            dobj['iDTime']= datetime(Year,1,1,0)
-            dobj['eDTime']= datetime(Year,12,31,18)
-            dobj['nstep'] = nstep
-            dobj['a1latbnd'] = a1latbnd
-            dobj['a1lonbnd'] = a1lonbnd
-            dobj['dgrid']    = dgrid
-            dobj['const'] = const
-            dobj['tcrvort'] = tcrvort
-
-            for vname in dobj.keys():
-                objPath= outDir + '/%s.tc.obj.%04d.npy'%(vname,Year)
-                np.save(objPath, dobj[vname])
-                print(objPath)
-
-
-        #------------------------
-        # Figure for each ensemble
+    
+            if figobj is True:
+                for Year in lYear:
+        
+                    outDir = outbaseDir + '/%s/%s-%03d'%(slabel, scen, ens)
+                    a2countTmp = np.load(outDir + '/a2count.tc.obj.%04d.npy'%(Year,Mon))
+                    nstepTmp   = np.load(outDir + '/nstep.tc.obj.%04d.npy'%(Year,Mon))
+     
+                    a2count = a2count + a2countTmp
+                    nstep   = nstep   + nstepTmp
+        
+        
+                a2fig = a2count.astype('float32')/nstep
+                a2fig = ma.masked_less(a2fig,0)*4*365  # times/10-year
+        
+                dpara = {}
+                dpara['title'] = 'count/year (d4PDF)' + '%04d-%04d'%(iY,eY) + '\n' + '%s-%s sst:%d ex:%.2f tc:%.2f \n wc:%.1f wind:%d wdif:%d ens:%03d'%(expr, scen, thsst*10, exrvortout, tcrvortout, thwcore, thwind, thwdif, ens)
+                #dpara['figpath'] = figdir + '/map.freq.tc.obj.png'
+                dpara['figpath'] = figdir + '/map.freq.tc.obj.%s.%04d-%04d.en-%03d.png'%(slabel, iY, eY, ens)
+                dpara['cmbnd'] = cmbnd
+                #draw_map(a2fig, dpara)
+    
+        #***********************
+        # Figure: ensemble mean
+        #***********************
         a2count = np.zeros([ny,nx],'int32')
         nstep   = 0
-
-        if figobj is True:
-            for Year in lYear:
     
-                outDir = outbaseDir + '/%s/%s-%03d'%(slabel, scen, ens)
-                a2countTmp = np.load(outDir + '/a2count.tc.obj.%04d.npy'%(Year,Mon))
-                nstepTmp   = np.load(outDir + '/nstep.tc.obj.%04d.npy'%(Year,Mon))
- 
-                a2count = a2count + a2countTmp
-                nstep   = nstep   + nstepTmp
+        if figmean is True:
+            for ens in lens:
+                for Year in lYear:
+                    print(ens,Year) 
+                    outDir = outbaseDir + '/%s/%s-%03d'%(slabel, scen, ens)
+                    #print(outDir + '/a2count.tc.obj.%04d.npy'%(Year))
+                    a2countTmp = np.load(outDir + '/a2count.tc.obj.%04d.npy'%(Year))
+                    nstepTmp   = np.load(outDir + '/nstep.tc.obj.%04d.npy'%(Year))
+        
+                    a2count = a2count + a2countTmp
+                    nstep   = nstep   + nstepTmp
     
-    
-            a2fig = a2count.astype('float32')/nstep
+            a2fig = a2count.astype('float32') / nstep
             a2fig = ma.masked_less(a2fig,0)*4*365  # times/10-year
-    
+        
             dpara = {}
-            dpara['title'] = 'count/year (d4PDF)' + '%04d-%04d'%(iY,eY) + '\n' + '%s-%s sst:%d ex:%.2f tc:%.2f \n wc:%.1f wind:%d wdif:%d ens:%03d'%(expr, scen, thsst*10, exrvortout, tcrvortout, thwcore, thwind, thwdif, ens)
-            #dpara['figpath'] = figdir + '/map.freq.tc.obj.png'
-            dpara['figpath'] = figdir + '/map.freq.tc.obj.%s.%04d-%04d.en-%03d.png'%(slabel, iY, eY, ens)
+            dpara['title'] = 'Prob. of existence (d4PDF) [count/year] %04d-%04d'%(iY, eY) + '\n' + '%s-%s sst:%d ex:%.2f tc:%.2f \n wc:%.1f wind:%d wdif:%d ens-mean'%(expr, scen, thsst*10, exrvortout, tcrvortout, thwcore, thwind, thwdif)
+            dpara['figpath'] = figdir + '/map.freq.tc.obj.%s.%04d-%04d.ave.res-%.1f.png'%(slabel, iY, eY, dgrid)
             dpara['cmbnd'] = cmbnd
-            #draw_map(a2fig, dpara)
-
-    #***********************
-    # Figure: ensemble mean
-    #***********************
-    a2count = np.zeros([ny,nx],'int32')
-    nstep   = 0
-
-    if figmean is True:
-        for ens in lens:
-            for Year in lYear:
-                print(ens,Year) 
-                outDir = outbaseDir + '/%s/%s-%03d'%(slabel, scen, ens)
-                #print(outDir + '/a2count.tc.obj.%04d.npy'%(Year))
-                a2countTmp = np.load(outDir + '/a2count.tc.obj.%04d.npy'%(Year))
-                nstepTmp   = np.load(outDir + '/nstep.tc.obj.%04d.npy'%(Year))
+            dpara['extend']= "max"
+            draw_map(a2fig, dpara)
     
-                a2count = a2count + a2countTmp
-                nstep   = nstep   + nstepTmp
-
-        a2fig = a2count.astype('float32') / nstep
-        a2fig = ma.masked_less(a2fig,0)*4*365  # times/10-year
-    
-        dpara = {}
-        dpara['title'] = 'Prob. of existence (d4PDF) [count/year] %04d-%04d'%(iY, eY) + '\n' + '%s-%s sst:%d ex:%.2f tc:%.2f \n wc:%.1f wind:%d wdif:%d ens-mean'%(expr, scen, thsst*10, exrvortout, tcrvortout, thwcore, thwind, thwdif)
-        dpara['figpath'] = figdir + '/map.freq.tc.obj.%s.%04d-%04d.ave.png'%(slabel, iY, eY)
-        dpara['cmbnd'] = cmbnd
-        dpara['extend']= "max"
-        draw_map(a2fig, dpara)
-
 # %%

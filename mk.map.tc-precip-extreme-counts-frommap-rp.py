@@ -1,7 +1,7 @@
 # %%
 import matplotlib
 matplotlib.use('Agg')
-%matplotlib inline
+#%matplotlib inline
 import cartopy.crs as ccrs
 import matplotlib.ticker as mticker
 #----------------------------------
@@ -24,11 +24,11 @@ calcflag = True
 #calcflag = False
 #figflag = True
 figflag = False
-#iY = 1990
-#eY = 2010
+iY = 1980
+eY = 1989
 
-iY = 2001
-eY = 2010
+#iY = 2001
+#eY = 2010
 lYear = range(iY,eY+1)
 lMon  = range(1,12+1)
 
@@ -39,23 +39,23 @@ expr    = 'XX'
 #scen    = 'HPB' # run={expr}-{scen}-{ens}
 #scen    = 'HPB' # run={expr}-{scen}-{ens}
 #lscen   = ['HPB','HPB_NAT']
-lscen   = ['HPB_NAT']
-#lscen   = ['HPB']
+#lscen   = ['HPB_NAT']
+lscen   = ['HPB']
 #lens    = list(range(1,50+1))
 #lens    = list(range(1,20+1))
-lens    = list(range(1,1+1))
+lens    = list(range(2,20+1))
 
-#iYbase = 1990
-#eYbase = 2010
-#lensbase = list(range(1,50+1))
-#scenbase = "HPB_NAT"
-
-iYbase = 2001
+iYbase = 1990
 eYbase = 2010
-#lensbase = list(range(1,20+1))
-lensbase = list(range(1,1+1))
-#scenbase = "HPB"
+lensbase = list(range(1,50+1))
 scenbase = "HPB_NAT"
+
+#iYbase = 2001
+#eYbase = 2010
+#lensbase = list(range(1,20+1))
+#lensbase = list(range(1,1+1))
+#scenbase = "HPB"
+#scenbase = "HPB_NAT"
 
 detectName = 'wsd_d4pdf_20201209-py38'
 #detectName = 'wsd_d4pdf_20200813'

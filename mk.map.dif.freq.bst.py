@@ -8,7 +8,6 @@ import matplotlib.ticker as mticker
 import scipy.stats
 #----------------------------------
 import sys, os, pickle
-from   mpl_toolkits.basemap import Basemap
 from   numpy import *
 from   datetime import datetime, timedelta
 from   importlib import import_module
@@ -25,38 +24,17 @@ lYear1 = range(1998,2015+1)
 #lYear0 = range(1980,1998+1)
 #lYear1 = range(1999,2017+1)
 
-#lYear0 = range(1961,1987+1)
-#lYear1 = range(1988,2010+1)
-
-#lYear0 = range(1971,1990+1)
-#lYear1 = range(1991,2010+1)
-#lYear0 = range(1980,1990+1)
-#lYear1 = range(1991,2010+1)
-#lYear0 = range(1961,1985+1)
-#lYear1 = range(1991,2015+1)
-#lYear0 = range(1961,1985+1)
-#lYear1 = range(1986,2010+1)
-#lYear0 = range(1951,1970+1)
-#lYear1 = range(1996,2015+1)
-#lYear0 = range(1951,1970+1)
-#lYear1 = range(1986,2015+1)
-#lYear0 = range(1951,1970+1)
-#lYear1 = range(1971,1990+1)
-
-
-
 
 iY0,eY0 = lYear0[0],lYear0[-1]
 iY1,eY1 = lYear1[0],lYear1[-1]
 
+dgrid = 2.5
+shift = False
 #-----------------
-outbaseDir = '/home/utsumi/temp/bams2020/map-freq'
-util.mk_dir(outbaseDir)
 figdir  = '/home/utsumi/temp/bams2020/fig/map-freq'
 util.mk_dir(figdir)
 #----------------------------------
 miss_int= -9999
-dgrid = 5
 a1latbnd  = np.arange(-90,90+0.01, dgrid)
 a1lonbnd  = np.arange(0,360+0.01, dgrid)
 ny = len(a1latbnd) - 1
@@ -72,7 +50,10 @@ latbnd0 = a1latbnd[0]
 #************************************
 # d4PDF (Objective detection)
 #************************************
-freqbasedir = '/home/utsumi/temp/bams2020/map-freq'
+freqbasedir = '/home/utsumi/temp/bams2020/map-freq-%.1f'%(dgrid)
+if shift==True:
+    freqbasedir = freqbasedir + "-shift"
+
 freqdir = freqbasedir + "/bst"
 
 a3count0 = np.array([ np.load(freqdir + '/a2count.tc.bst.%04d.%02d.npy'%(Year,Mon)) for Mon in range(1,12+1) for Year in lYear0])
@@ -99,7 +80,7 @@ a2hatch = ma.masked_where(a2pv>0.1, a2fig)
 
 #-- title, figure name -----
 stitle = 'diff. count/year %04d-%04d to %04d-%04d'%(iY0,eY0,iY1,eY1) 
-figpath = figdir + '/map.dif.freq.tc.bst.%04d-%04d.to.%04d-%04d.png'%(iY0,eY0,iY1,eY1)
+figpath = figdir + '/map.dif.freq.tc.bst.%04d-%04d.to.%04d-%04d.res-%.1f.png'%(iY0,eY0,iY1,eY1,dgrid)
 #---------------------------
 figmap   = plt.figure(figsize=(6,4))
 axmap    = figmap.add_axes([0.1, 0.1, 0.7, 0.8], projection=ccrs.PlateCarree())

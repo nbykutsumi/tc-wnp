@@ -31,17 +31,24 @@ expr    = 'XX'
 lens    = range(1,50+1)
 #lens    = range(1,2+1)
 #lens    = range(3,9+1)
-
+dgrid = 2.5
 wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
-outbaseDir = '/home/utsumi/temp/bams2020/map-freq'
+outbaseDir = '/home/utsumi/temp/bams2020/map-freq-%.1f'%(dgrid)
 util.mk_dir(outbaseDir)
 figdir  = '/home/utsumi/temp/bams2020/fig/map-freq'
 util.mk_dir(figdir)
 #----------------------------------
 miss_int= -9999
-dgrid = 5
-a1latbnd  = np.arange(-90,90+0.01, dgrid)
-a1lonbnd  = np.arange(0,360+0.01, dgrid)
+#dgrid = 5
+dgrid = 2.5
+#shift = True
+shift = False
+if shift==True:
+    a1latbnd  = np.arange(-90+dgrid*0.5,90+0.01, dgrid)
+    a1lonbnd  = np.arange(0,360+0.01, dgrid)
+else:
+    a1latbnd  = np.arange(-90,90+0.01, dgrid)
+    a1lonbnd  = np.arange(0,360+0.01, dgrid)
 ny = len(a1latbnd) - 1
 nx = len(a1lonbnd) - 1
 lonbnd0 = a1lonbnd[0]
@@ -49,8 +56,6 @@ latbnd0 = a1latbnd[0]
 #[[lllat,lllon],[urlat,urlon]] = [[0,100],[45,180]]
 #[[lllat,lllon],[urlat,urlon]] = [[0,100],[50,180]]
 [[lllat,lllon],[urlat,urlon]] = [[10,105],[45,150]]
-
-#**************************
 
 #************************************
 # d4PDF (Objective detection)
@@ -75,7 +80,10 @@ for scen in ["HPB","HPB_NAT"]:
         nstep   = 0
         for Year in lYear:
             print(scen,ens,Year)
-            freqbasedir = '/home/utsumi/temp/bams2020/map-freq'
+            freqbasedir = '/home/utsumi/temp/bams2020/map-freq-%.1f'%(dgrid)
+
+            if shift==True:
+                freqbasedir = freqbasedir + "-shift"
 
             freqdir = freqbasedir + '/%s/%s-%03d'%(slabel, scen, ens)
 
@@ -105,7 +113,7 @@ a2hatch = ma.masked_where(a2pv>0.05, a2fig)
 
 #-- title, figure name -----
 stitle = 'diff. (HIST - NAT) count/year ' + '%04d-%04d'%(iY,eY) 
-figpath = figdir + '/map.dif.freq.tc.obj.%04d-%04d.png'%(iY,eY)
+figpath = figdir + '/map.dif.freq.tc.obj.%04d-%04d.res-%.1f.png'%(iY,eY, dgrid)
 #---------------------------
 figmap   = plt.figure(figsize=(6,4))
 #axmap    = figmap.add_axes([0.1, 0.1, 0.7, 0.8], projection=ccrs.PlateCarree())
@@ -185,7 +193,7 @@ a2hatch = ma.masked_where(a2pv>0.05, a2fig)
 
 #-- title, figure name -----
 stitle = 'diff. (HIST - NAT) (%) ' + '%04d-%04d'%(iY,eY) 
-figpath = figdir + '/map.difrat.freq.tc.obj.%04d-%04d.png'%(iY,eY)
+figpath = figdir + '/map.difrat.freq.tc.obj.%04d-%04d.res-%.1f.png'%(iY,eY,dgrid)
 #---------------------------
 figmap   = plt.figure(figsize=(6,4))
 axmap    = figmap.add_axes([0.1, 0.1, 0.7, 0.8], projection=ccrs.PlateCarree())

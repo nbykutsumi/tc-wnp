@@ -1,7 +1,7 @@
 # %%
 import matplotlib
 matplotlib.use('Agg')
-%matplotlib inline
+#%matplotlib inline
 import cartopy.crs as ccrs
 import matplotlib.ticker as mticker
 #----------------------------------
@@ -16,16 +16,19 @@ from bisect import bisect_left
 from detect_fsub import *
 import socket
 #--------------------------------------
-#calcflag = True
-calcflag = False
+calcflag = True
+#calcflag = False
 #calcave  = True
 calcave  = False
 #calcsum  = True
 calcsum  = False
 figflag  = True
 #figflag  = False
-iY = 1990
-eY = 2010
+#iY = 1990
+#eY = 2010
+iY = 1980
+eY = 1989
+
 lYear = range(iY,eY+1)
 lMon  = range(1,12+1)
 
@@ -36,11 +39,11 @@ dgridx = 9  # 9 x 0.5625    ~ 5.06 degree radius
 prj     = "d4PDF"
 model   = "__"
 expr    = 'XX'
-lscen   = ['HPB','HPB_NAT']
-#lscen   = ['HPB']
+#lscen   = ['HPB','HPB_NAT']
+lscen   = ['HPB']
 #lscen   = ['HPB_NAT']
-lens    = list(range(1,50+1))
-#lens    = list(range(1,35+1))
+#lens    = list(range(1,50+1))
+lens    = list(range(1,20+1))
 
 region = "WNP"
 dBBox = {"WNP":[[0,100],[50,150]]}
